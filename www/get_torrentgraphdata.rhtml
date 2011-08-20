@@ -1,0 +1,37 @@
+<%
+  require 'functions'
+  errorMessage = nil
+
+  torrentName = nil
+  Apache.request.paramtable.each{ |k,v|
+    k.untaint
+    if k == 'name'
+      torrentName = v.to_s
+    end
+  }
+
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    if ! sessionIsValid?(client, Apache.request)
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if client
+    points = client.getGraphInfo(torrentName)
+    if ! points
+      errorMessage = client.errorMsg
+      puts "Error, Error\n"
+    else
+      puts "Time,Rate\n"
+      points.each{ |p|
+        puts "#{"%.3f" % p.x},#{"%.3f" % p.y}\n"
+      }
+    end
+  end
+  
+%>

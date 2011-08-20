@@ -1,0 +1,111 @@
+
+Backend:
+  - libtorrbent-rasterbar
+  - Config files, passwd file
+
+Controller: 
+  - A ruby daemon that contains the libtorrent session.
+
+Frontend:
+  - Apache
+  - eRuby
+    - Install eruby, mod_ruby
+    - In /etc/apache2/apache2.conf add:
+
+    <IfModule mod_ruby.c>
+      # for Apache::ERubyRun
+      RubyRequire apache/eruby-run
+
+      # handle *.rhtml as eruby files.
+      <Files *.rhtml>
+        SetHandler ruby-object
+        RubyHandler Apache::ERubyRun.instance
+      </Files>
+
+      AddType text/html .rhtml
+    </IfModule>
+  - In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex varialbe
+ 
+  - RubyAddPath: <http://www.modruby.net/en/doc/?ApacheDirectives>
+
+  - Alternative to eRuby: ERB (embedded ruby)
+
+
+INSTALLATION:
+-------------
+
+0. Building requires:
+  ruby1.8-dev
+  libtorrent-rasterbar-dev
+
+1. Install: 
+  apache2
+  libapache2-mod-ruby
+  eruby
+  libjson-ruby
+
+2. Copy the ruby-torrent directory to the desired installation path. After this step,
+   later steps will use RUBY_TORRENT_HOME to refer to this path (the path includes the 
+  ruby-torrent/ part).
+
+3. Add the following stanza to /etc/apache2/apache2.conf:
+
+    <IfModule mod_ruby.c>
+      # for Apache::ERubyRun
+      RubyRequire apache/eruby-run
+ 
+      RubyAddPath RUBY_TORRENT_HOME/daemon
+      RubyAddPath RUBY_TORRENT_HOME/www-lib
+   
+      # handle *.rhtml as eruby files.
+      <Files *.rhtml>
+        SetHandler ruby-object
+        RubyHandler Apache::ERubyRun.instance
+      </Files>
+      
+      AddType text/html .rhtml
+    </IfModule>
+
+  But replace RUBY_TORRENT_HOME with the real home. 
+
+4. In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex variable
+
+5. Make a symbolic link from the web-accessible directory under the apache root where 
+   you would like rubytorrent to be accessible to the www directory of rubytorrent. 
+
+   For example, if apache home is /var/www/ and you want to be able to access rubytorrent
+   as http://host/rubytorrent, then:
+
+      cd /var/www/
+      ln -s RUBY_TORRENT_HOME/www rubytorrent
+
+RUNNING
+-------
+
+1. Change to the directory RUBY_TORRENT_HOME/daemon and add some user accounts ./adduser.rb
+  
+    ./adduser <username> <password>
+
+   If you add more users later, you must restart the daemon for it to detect the changes.
+
+2. Change to the directory RUBY_TORRENT_HOME/daemon and start daemon.rb:
+
+    ./daemon.rb
+
+   and let it run in the background. For debugging, pass the -x option to prevent it 
+   from daemonizing.
+
+
+3. Browse to the rubytorrent webpage and login.
+
+
+TODO
+----
+
+- Allow deletion of users from password file
+
+- Allow use of different ports. Currently 3000 is encoded in the Apache side - how to config www pages
+  - Could use an env var: RubySetEnv LANG "ja_JP.eucJP"
+  - See http://www.modruby.net/en/index.rbx?mode=search&word=shugo#label-15
+
+- Use fast-resume data for torrents

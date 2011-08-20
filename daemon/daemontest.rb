@@ -1,0 +1,4 @@
+
+def getSomeString
+  "Elderberg"
+end

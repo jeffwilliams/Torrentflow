@@ -1,0 +1,71 @@
+<%
+  #
+  # This method returns a JSON-encoded array of torrent-info objects on success.
+  # The first element of the array is not a torrent info object, but is instead 
+  # the string "success" on success, or an error message on failure. 
+  #
+
+  require 'functions'
+  require "json" 
+
+  attribs = []
+  attribsHash = {}
+  # This page expects the request to contain form variables whos 
+  # name is the set of torrent attributes to get from the torrent daemon
+  #
+  # The name attribute is treated specially. It is always returned regardless
+  # of whether it's specified in the request or not. If it is not specified, 
+  # all torrents are returned. If it is specified, only the torrent with that
+  # name is returned.
+
+  torrentNameFilter = nil
+  Apache.request.paramtable.each{ |k,v|
+    k.untaint
+    if k == 'name'
+      torrentNameFilter = v.to_s
+    end
+    attribs.push k.to_sym
+    attribsHash[k.to_sym] = true
+  }
+  if !attribsHash.has_key?(:name)
+    attribsHash[:name] = true
+    attribs.push :name
+  end
+    #action = Apache.request.paramtable['action'].to_s
+
+  errorMessage = nil
+  #x = JSON.generate({"a" => 5})
+  #puts x
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    if ! sessionIsValid?(client, Apache.request)
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if client
+    torrents = client.listTorrents(attribs, torrentNameFilter)
+    if torrents 
+      # Send the array of TorrentInfo objects as JSON
+      encoded = torrents.collect{ |t|
+        # Add in any computed values
+        #if attribsHash.has_key?(:estimated_time)
+        #  rem = calculateRemainingTime(t)
+        #  t.values[:estimated_time] = rem
+        #end
+        #t.toJson
+        t.values
+      }
+      rc = ["success"]
+      rc.concat encoded
+      puts JSON.generate(rc)
+    end 
+    client.close
+  else 
+    puts JSON.generate([errorMessage])
+  end
+%>

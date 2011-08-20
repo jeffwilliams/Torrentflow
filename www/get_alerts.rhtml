@@ -1,0 +1,39 @@
+<%
+  #
+  # This method returns a JSON-encoded array of alert strings on success.
+  # The first element of the array is not a torrent info object, but is instead 
+  # the string "success" on success, or an error message on failure. 
+  #
+
+  require 'functions'
+  require "json" 
+
+  attribs = []
+  attribsHash = {}
+  # This page expects the request to contain a name form variable 
+  # that is set to the name of the torrent to get the alerts for. If this 
+  # variable is empty or not set then the global alerts are returned. 
+  #
+  torrentNameFilter = Apache.request.paramtable['name'].to_s
+  torrentNameFilter.untaint
+  torrentNameFilter = nil if torrentNameFilter.length == 0
+  
+  errorMessage = nil
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    torrents = client.getAlerts(torrentNameFilter)
+    if torrents 
+      # Send the array of TorrentInfo objects as JSON
+      rc = ["success"]
+      rc.concat torrents
+      puts JSON.generate(rc)
+    end 
+    client.close
+  else 
+    puts JSON.generate([errorMessage])
+  end
+%>
+

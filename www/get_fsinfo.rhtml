@@ -1,0 +1,43 @@
+<%
+  #
+  # This method returns a JSON-encoded array of alert strings on success.
+  # The first element of the array is not a torrent info object, but is instead 
+  # the string "success" on success, or an error message on failure. 
+  #
+
+  require 'functions'
+  require "json" 
+
+  attribs = []
+  attribsHash = {}
+  
+  errorMessage = nil
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    if ! sessionIsValid?(client, Apache.request)
+      puts JSON.generate(["Your session has expired, or you need to log in"])
+    else
+      fsInfo = client.getFsInfo
+      if fsInfo
+        rc = ["success"]
+        # Convert the fs info fields to a hash
+        fsInfoHash = Hash.new
+        fsInfoHash['freeSpace'] = fsInfo.freeSpace
+        fsInfoHash['usedSpace'] = fsInfo.usedSpace
+        fsInfoHash['totalSpace'] = fsInfo.totalSpace
+        fsInfoHash['usePercent'] = fsInfo.usePercent
+        rc.push fsInfoHash
+        puts JSON.generate(rc)
+      else
+        puts JSON.generate(["Error getting info: " + fsInfo.errorMsg])
+      end 
+    end
+    client.close
+  else 
+    puts JSON.generate([errorMessage])
+  end
+%>
+

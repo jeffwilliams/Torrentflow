@@ -1,0 +1,311 @@
+<%
+  require 'functions'
+  require 'fileutils'
+
+  # If this is set to false, then users don't have to login to manage torrents
+  AuthenticationEnabled = true
+
+  errorMessage = nil
+  noticeMessage = nil
+
+  ################# Handle Session ##############
+  authenticated = false
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+  if client
+    if sessionIsValid?(client, Apache.request)
+      authenticated = true
+    end
+  end
+  
+  ################# End Handle Session ##############
+  
+  ################# Handle Form Submits ##############
+  action = Apache.request.paramtable['action'].to_s
+  if action && action.length > 0
+    rc = Apache.request.parse
+
+    if action == "upload_torrent"
+      if client  
+        Apache.request.uploads.each{ |k,v|
+          n = v.tempname
+          n.untaint
+          # Ensure the file is readable by all
+          FileUtils.chmod 0644, n
+          rc = client.getTorrent(n, :disk, v.filename)
+          if ! rc
+            errorMessage = "Uploading torrent failed (1): #{client.errorMsg}"
+          else
+            if client.addTorrent(rc)
+              noticeMessage = "File uploaded"
+            else
+              errorMessage = "Adding torrent failed (2): #{client.errorMsg}"
+            end
+          end
+        } 
+      end
+    elsif action == "download_torrent"
+      if client  
+
+        url = Apache.request.paramtable['torrenturl']
+        if url
+          url.untaint
+          url = url.to_s
+          # Use a higher timeout here
+          oldTimeout = client.readTimeout
+          client.readTimeout = 12
+          rc = client.getTorrent(url, :url)
+          client.readTimeout = oldTimeout
+          if ! rc
+            errorMessage = "Uploading torrent failed (1): #{client.errorMsg}"
+          else
+            if client.addTorrent(rc)
+              noticeMessage = "URL retrieved"
+            else
+              errorMessage = "Adding torrent failed (2): #{client.errorMsg}"
+            end
+          end
+        else
+          errorMessage = "The form submission didn't include the variable torrenturl"
+        end
+      end
+    elsif action == "modify_torrents"
+      rc = handleModificationRequest(Apache.request)
+      errorMessage = rc if rc.length > 0
+    elsif action == "login"
+      if client
+        if handleLoginRequest(client, Apache.request)
+          authenticated = true
+        else
+          errorMessage = "Invalid login or password"
+        end
+      end
+    elsif action == "logout"
+      if client
+        if handleLogoutRequest(client, Apache.request)
+          authenticated = false
+        end
+      end
+    else
+      errorMessage = "I don't understand the form action '#{action}'."
+    end
+  end
+
+  if client
+    client.close
+  end
+   
+  ############### End Handle Form Submits ############
+%>
+
+<%
+  if ! authenticated && AuthenticationEnabled
+%>
+
+<html>
+  <head>
+    <title>Ruby Torrent - Login</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script language="javascript" src="prototype.js"></script>
+    <!-- <script language="javascript" src="dygraph-combined.js"></script> -->
+    <script language="javascript" src="code.js"></script>
+  </head>
+<!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
+   <body> 
+    <div id="maindiv_border">
+      <div id="maindiv">
+        <div class="logindiv">
+          <p class="logintitle">
+            RubyTorrent Login
+          </p>
+          <%
+            if errorMessage || noticeMessage
+              puts '<p class="note">'
+              if errorMessage
+                puts errorMessage 
+                puts "<br/>"
+              end
+              if noticeMessage
+                puts noticeMessage 
+                puts "<br/>"
+              end
+              puts "</p>"
+            end
+          %>
+          <form method="post" action="index.rhtml">
+            <input type="hidden" name="action" value="login"/>
+            <table class="logintable">
+              <tr>
+                <td>Login: </td><td> <input type="text" name="login" /> </td>
+              </tr>
+              <tr>
+                <td>Password: </td><td> <input type="password" name="password" /> </td>
+              </tr>
+              <tr>
+                <td></td><td><input type="submit" value="login"/></td>
+              </tr>
+            </table>
+          </form>
+          
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+<% 
+  else # if ! authenticated
+%>
+
+<html>
+  <head>
+    <title>Ruby Torrent</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script language="javascript" src="prototype.js"></script>
+    <script language="javascript" src="code.js"></script>
+  </head>
+<!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
+   <body onload="startTorrentsUpdates();"> 
+    <div id="maindiv_border">
+        <div id="maindiv">
+          <div id="title">
+            Ruby Torrent
+          </div>
+          <p>
+            <table id="statustable">
+              <tr>
+                <td id="torrent_status">
+                  0 active torrents, 0 failed, 0 complete 
+                </td>
+                <td id="disk_status">
+                  []
+                </td>
+              </tr>
+            </table>
+          </p>
+          <p id="javascript_error" class="collapsed">
+          </p>
+          <%
+            if errorMessage || noticeMessage
+              puts '<p class="note">'
+              if errorMessage
+                puts errorMessage 
+                puts "<br/>"
+              end
+              if noticeMessage
+                puts noticeMessage 
+                puts "<br/>"
+              end
+              puts "</p>"
+            end
+          %>
+          <div class="inputs">
+            <!--<h2>Add Torrents</h2>-->
+            <table>
+            <tr>
+              <td>
+                <form method="post" enctype="multipart/form-data" action="index.rhtml">
+                  Torrent URL: </td><td><input type="text" name="torrenturl" /> <input type="submit" value="Get file" />
+                  <input type="hidden" name="action" value="download_torrent"/>
+                </form>
+              </td>
+            </tr>
+            <tr>
+              
+              <td>
+                <form method="post" enctype="multipart/form-data" action="index.rhtml">
+                  Torrent upload: </td><td> <input type="file" name="torrentfile" value="browse..." /> <input type="submit" value="Upload" />
+                  <input type="hidden" name="action" value="upload_torrent"/>
+                </form>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <form method="post" action="index.rhtml">
+                  <input type="hidden" name="action" value="logout"/>
+                  <input type="submit" name="action" value="logout"/>
+                </form>
+              </td>
+            </tr>
+            </table>
+          </div>
+
+
+          <div class="torrenttabletitle">
+            <span>Torrents</span><br>
+          </div>
+          <form method="post" action="index.rhtml">
+            <div class="torrenttablebuttons">
+                <input type="submit" name="pause" value="Pause"> <input type="submit" name="remove_torrent" value="Remove Torrent"> <input type="submit" name="remove_files" onclick="return confirmFilesDelete()" value="Remove Files">
+            </div>
+            <div class="fullwidth">
+                <input type="hidden" name="action" value="modify_torrents"/>
+                <table id="torrents_table_inprogress">
+                  <tr>
+                    <th>Name</th>
+                    <th class="sizecol">Size</th>
+                    <th class="statuscol">Status</th>
+                    <th class="ratescol">Rates (down|up)</th>
+                    <th class="progresscol">Progress</th>
+                    <th class="timecol">Estimated time</th>
+                    <th class="detailscol">Details</th>
+                    <th class="selcol">Sel</th>
+                  </tr>
+                  <tbody>
+                    <tr code="loading">
+                      <td>Loading data...</td>
+                    </tr>
+                  </tbody>
+                </table>
+            </div>
+          </form>
+            <div class="torrenttablebuttons">
+              <p>
+              <span id="page_label">Page 1/1</span> <button onclick="prevPage(); return false" id="prev_page" class="buttonlinkenabled">prev</button> <button onclick="nextPage(); return false" id="next_page" class="buttonlinkenabled">next</button>
+              </p>
+            </div>
+        </div>
+    </div>
+  
+    <!-- This is the overlay div -->
+    <div id="overlay">
+      <h1 class="overlaytitle" id="overlay_title">Title</h1>
+      <p>
+        <table>
+          <tr><td>
+            <table>
+              <tr><th>Creator</th><td id="overlay_creator_col"></td></tr>
+              <tr><th>Comment</th><td id="overlay_comment_col"></td></tr>
+              <tr><th>Size</th><td id="overlay_size_col"></td></tr>
+              <tr><th>Status</th><td id="overlay_status_col"></td></tr>
+              <tr><th>Progress</th><td id="overlay_progress_col"></td></tr>
+              <tr><th>Peers</th><td id="overlay_peers_col"></td></tr>
+              <tr><th>Download Rate</th><td id="overlay_downloadrate_col"></td></tr>
+              <tr><th>Upload Rate</th><td id="overlay_uploadrate_col"></td></tr>
+              <tr><th>Download Rate Limit</th><td id="overlay_downloadratelimit_col"></td></tr>
+              <tr><th>Upload Rate Limit</th><td id="overlay_uploadratelimit_col"></td></tr>
+              <tr><th>Upload Ratio</th><td id="overlay_ratio_col"></td></tr>
+            </table>
+          </td>
+          <td>
+            <div id="graphdiv">
+              Graph is here
+            <div>
+          </td></tr>
+        <table>
+      </p>
+      <div class="indented">
+        <h2>Alerts:</h2>
+        <div id="overlay_alerts_div">
+        </div>
+      </div>
+      <button class="hidebutton" onclick="hideOverlay();">hide</button>
+    </div>
+  </body>
+
+</html>
+
+<% 
+  end # if authenticated
+%>
