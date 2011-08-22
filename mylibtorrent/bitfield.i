@@ -1,5 +1,7 @@
 %{
+#if LIBTORRENT_VERSION_MINOR == 14
 #include "libtorrent/bitfield.hpp"
+#endif
 %}
 
 namespace libtorrent {

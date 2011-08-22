@@ -52,7 +52,11 @@ namespace libtorrent {
     size_type total_download;
     size_type total_upload;
     peer_id pid;
+#if LIBTORRENT_VERSION_MINOR == 13  
+    std::vector<bool> pieces;
+#elif LIBTORRENT_VERSION_MINOR == 14
     libtorrent::bitfield pieces;
+#endif
     bool seed;
     int upload_limit;
     int download_limit;
