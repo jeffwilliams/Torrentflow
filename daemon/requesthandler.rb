@@ -486,9 +486,9 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def stateToSym(state)
     if state == Libtorrent::TorrentStatus::QUEUED_FOR_CHECKING
       :queued_for_checking
-    elsif state == Libtorrent::TorrentStatus::CHECKING_FILES ;
+    elsif state == Libtorrent::TorrentStatus::CHECKING_FILES
       :checking_files
-    elsif state == Libtorrent::TorrentStatus::CONNECTING_TO_TRACKER
+    elsif defined?(Libtorrent::TorrentStatus::CONNECTING_TO_TRACKER) && state == Libtorrent::TorrentStatus::CONNECTING_TO_TRACKER
       :connecting_to_tracker
     elsif state == Libtorrent::TorrentStatus::DOWNLOADING_METADATA
       :downloading_metadata
@@ -500,7 +500,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       :seeding
     elsif state == Libtorrent::TorrentStatus::ALLOCATING
       :allocating
-    elsif state == Libtorrent::TorrentStatus::CHECKING_RESUME_DATA
+    elsif defined?(Libtorrent::TorrentStatus::CHECKING_RESUME_DATA) && state == Libtorrent::TorrentStatus::CHECKING_RESUME_DATA
       :checking_resume_data
     else
       :unknown
