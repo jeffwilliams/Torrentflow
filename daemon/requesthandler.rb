@@ -500,6 +500,8 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       :seeding
     elsif state == Libtorrent::TorrentStatus::ALLOCATING
       :allocating
+    elsif state == Libtorrent::TorrentStatus::CHECKING_RESUME_DATA
+      :checking_resume_data
     else
       :unknown
     end

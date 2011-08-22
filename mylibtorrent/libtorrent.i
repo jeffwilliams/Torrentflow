@@ -9,6 +9,7 @@ namespace libtorrent {
 }
 
 %include "fingerprint.i"
+%include "bitfield.i"
 %include "torrent_status.i"
 %include "bencode.i"
 %include "entry.i"

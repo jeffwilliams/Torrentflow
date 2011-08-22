@@ -31,29 +31,15 @@ namespace libtorrent {
   {
   public:
 
-    torrent_info();
     torrent_info(sha1_hash const& info_hash);
     torrent_info(entry const& torrent_file);
     ~torrent_info();
 
-    entry create_torrent() const;
-    entry create_info_metadata() const;
-
     const std::string& comment() const;
-    %rename("comment=") set_comment(char const* str);
-    void set_comment(char const* str);
 
     const std::string& creator() const;
-    %rename("creator=") set_creator(char const* str);
-    void set_creator(char const* str);
-
-    %rename("piece_size=") set_piece_size(int size);
-    void set_piece_size(int size);
-
-    void set_hash(int index, sha1_hash const& h);
 
     void add_tracker(std::string const& url, int tier = 0);
-    void add_file(boost::filesystem::path file, size_type size);
     void add_url_seed(std::string const& url);
     boost::optional<boost::posix_time::ptime> creation_date() const;
 
@@ -96,16 +82,10 @@ namespace libtorrent {
     %rename("valid?") is_valid() const;
     bool is_valid() const;
 
-    void convert_file_names();
     size_type piece_size(int index) const;
     const sha1_hash& hash_for_piece(int index) const;
-    void parse_info_section(entry const& e);
 
     %extend {
-      void add_file(const std::string& file_name) {
-        boost::filesystem::path p(file_name);
-        self->add_file(p, boost::filesystem::file_size(p));
-      }
 
       VALUE files() const {
         VALUE array = rb_ary_new();
@@ -127,10 +107,6 @@ namespace libtorrent {
         return libtorrent::torrent_info(load_entry(in));
       }
 
-      void save(const char* path) const {
-        libtorrent::entry e = self->create_torrent();
-        save_entry(e, path);
-      }
     }
   };
 }

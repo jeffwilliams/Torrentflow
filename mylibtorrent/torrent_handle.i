@@ -54,10 +54,14 @@ namespace libtorrent {
     void set_download_limit(int limit) const;
     %rename("download_rate_limit") download_limit() const;
     int download_limit() const;
-    
 
+#if LIBTORRENT_VERSION_MINOR == 13  
     void set_peer_upload_limit(asio::ip::tcp::endpoint ip, int limit) const;
     void set_peer_download_limit(asio::ip::tcp::endpoint ip, int limit) const;
+#elif LIBTORRENT_VERSION_MINOR == 14
+    void set_peer_upload_limit(boost::asio::ip::tcp::endpoint ip, int limit) const;
+    void set_peer_download_limit(boost::asio::ip::tcp::endpoint ip, int limit) const;
+#endif
 
     %rename("ratio=") set_ratio(float up_down_ratio) const;
     void set_ratio(float up_down_ratio) const;
@@ -70,7 +74,6 @@ namespace libtorrent {
 
     void set_tracker_login(std::string const& name , std::string const& password) const;
 
-    void connect_peer(asio::ip::tcp::endpoint const& adr) const;
     boost::filesystem::path save_path() const;
     void move_storage(boost::filesystem::path const& save_path) const;
     const sha1_hash& info_hash() const;

@@ -40,7 +40,11 @@ namespace libtorrent {
     %immutable;
 
     unsigned int flags;
+#if LIBTORRENT_VERSION_MINOR == 13  
+    boost::asio::ip::tcp::endpoint ip;
+#elif LIBTORRENT_VERSION_MINOR == 14
     asio::ip::tcp::endpoint ip;
+#endif
     float up_speed;
     float down_speed;
     float payload_up_speed;
@@ -48,7 +52,7 @@ namespace libtorrent {
     size_type total_download;
     size_type total_upload;
     peer_id pid;
-    std::vector<bool> pieces;
+    libtorrent::bitfield pieces;
     bool seed;
     int upload_limit;
     int download_limit;

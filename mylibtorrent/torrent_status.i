@@ -1,5 +1,6 @@
 %{
 #include "libtorrent/torrent_handle.hpp"
+#include "libtorrent/version.hpp"
 %}
 
 namespace libtorrent {
@@ -10,22 +11,32 @@ namespace libtorrent {
 
     %rename("QUEUED_FOR_CHECKING") queued_for_checking;
     %rename("CHECKING_FILES") checking_files;
+#if LIBTORRENT_VERSION_MINOR == 13
     %rename("CONNECTING_TO_TRACKER") connecting_to_tracker;
+#endif
     %rename("DOWNLOADING_METADATA") downloading_metadata;
     %rename("DOWNLOADING") downloading;
     %rename("FINISHED") finished;
     %rename("SEEDING") seeding;
     %rename("ALLOCATING") allocating;
+#if LIBTORRENT_VERSION_MINOR == 14
+    %rename("CHECKING_RESUME_DATA") checking_resume_data;
+#endif
     enum state_t
     {
       queued_for_checking,
       checking_files,
+#if LIBTORRENT_VERSION_MINOR == 13
       connecting_to_tracker,
+#endif
       downloading_metadata,
       downloading,
       finished,
       seeding,
       allocating
+#if LIBTORRENT_VERSION_MINOR == 14
+      ,checking_resume_data
+#endif
     };
  
     %immutable;
@@ -54,7 +65,13 @@ namespace libtorrent {
     int num_complete;
     int num_incomplete;
 
+#if LIBTORRENT_VERSION_MINOR == 13  
     const std::vector<bool>* pieces;
+#endif
+#if LIBTORRENT_VERSION_MINOR == 14
+    bitfield pieces;
+#endif 
+
     int num_pieces;
     size_type total_done;
     size_type total_wanted_done;

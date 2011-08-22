@@ -41,9 +41,6 @@ namespace libtorrent
 
 		virtual bool move_storage(boost::filesystem::path save_path) = 0;
 
-		// verify storage dependent fast resume entries
-		virtual bool verify_resume_data(entry& rd, std::string& error) = 0;
-
 		// write storage dependent fast resume entries
 		virtual void write_resume_data(entry& rd) const = 0;
 
