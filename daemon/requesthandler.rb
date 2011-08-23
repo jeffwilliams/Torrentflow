@@ -168,15 +168,24 @@ class GraphDataThread
         startTime = Time.new
         while ! @done
   
-          @timeSampleHolderMutex.synchronize{
-            @timeSampleHolder.addSample DataPoint.new( (Time.new - startTime) / 60, (@handle.status.download_rate.to_f/1024))
-          }
+          # Only add the sample if the torrent is running
+          if torrentIsRunning
+            @timeSampleHolderMutex.synchronize{
+              @timeSampleHolder.addSample DataPoint.new( (Time.new - startTime) / 60, (@handle.status.download_rate.to_f/1024))
+            }
+          end
           sleep 5
         end
       rescue
         puts "Exception in graph data thread: #{$!}"
       end    
     }
+  end
+
+  def torrentIsRunning
+    (@handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING_METADATA || 
+      @handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING) && 
+      ! @handle.paused?
   end
 
 end

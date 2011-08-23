@@ -9,7 +9,8 @@ commands =
   "del" => "Delete a torrent. Pass the name of the torrent",
   "get" => "Get a torrent and copy it to the torrents dir",
   "kill" => "Terminate the torrent daemon",
-  "alerts" => "Get the latest alerts. If a second parameter is specified, only alerts for that torrent name are returned"
+  "alerts" => "Get the latest alerts. If a second parameter is specified, only alerts for that torrent name are returned",
+  "fsinfo" => "Get fsinfo"
 }
 
 if ARGV.size <= 0 || !commands.has_key?(ARGV[0])
@@ -109,6 +110,19 @@ elsif ARGV[0] == "alerts"
     }
   else
     puts "Getting alerts failed"
+  end
+elsif ARGV[0] == "fsinfo"
+  torrentName = nil
+  torrentName = ARGV[1] if ARGV.size > 1
+  rc = client.getFsInfo
+  if rc
+    puts "Filesystem info:"
+    puts "freeSpace: #{rc.freeSpace}"
+    puts "usedSpace: #{rc.usedSpace}"
+    puts "totalSpace: #{rc.totalSpace}"
+    puts "usePercent: #{rc.usePercent}"
+  else
+    puts "Getting fs info failed"
   end
 end
 

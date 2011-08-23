@@ -22,8 +22,8 @@ def parseConfig
   end
 end
 
-if ARGV.size < 2
-  puts "Usage: #{$0} <login> <password>"
+if ARGV.size < 1
+  puts "Usage: #{$0} <login>"
   exit 1
 end
 
@@ -31,7 +31,32 @@ parseConfig
 
 auth = Authentication.new
 
-puts "Adding user #{ARGV[0]}/#{ARGV[1]}"
-auth.addAccount(ARGV[0], ARGV[1])
+pass1 = nil
+pass2 = nil
+while true
+  print "Password: "
+  $stdout.flush
+  system "stty -echo"
+  pass1 = $stdin.gets.chop
+  puts ""
+  print "Password again: "
+  $stdout.flush
+  pass2 = $stdin.gets.chop
+  puts ""
+  system "stty echo"
+  if pass1 != pass2
+    puts "The passwords don't match. Please enter them again."
+  else
+    break
+  end
+end
 
-puts "User added"
+puts "Adding user #{ARGV[0]}"
+begin
+  auth.addAccount(ARGV[0], pass1)
+  puts "User added"
+rescue
+  puts "#{$!}"
+  puts "User was not added"
+end
+
