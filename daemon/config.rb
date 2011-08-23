@@ -1,6 +1,8 @@
 require 'yaml'
 
 class Config
+  TorrentConfigFilename = "rubytorrentdeamon.conf"
+
   def initialize
     @listenPort = 3000
   end
@@ -16,6 +18,23 @@ class Config
       $syslog.info "Loading config file failed: file '#{filename}' doesn't exist."
     end
     rc
+  end
+  
+  # This function searches the RUBY loadpath to try and find the standard config file.
+  # If it's not found in the load path, the current directory and /etc/ are searched.
+  # If found it returns the full path, if not it returns nil.
+  def self.findConfigFile
+    $:.reverse.each{ |e|
+      path = "#{e}/rubytorrentdeamon.conf"
+      return path if File.exists? path
+    } 
+  
+    if File.exists?(TorrentConfigFilename)
+      return TorrentConfigFilename
+    elsif File.exists?("/etc/#{TorrentConfigFilename}")
+      return "/etc/#{TorrentConfigFilename}"
+    end
+    nil
   end
 
   # Port to listen on

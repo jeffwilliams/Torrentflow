@@ -81,17 +81,13 @@ def parseOptions
 end
 
 $config = Config.new
-TorrentConfigFilename = "rubytorrentdeamon.conf"
 def parseConfig
   configPath = nil
   
   # Find config file
-  if File.exists?(TorrentConfigFilename)
-    configPath = TorrentConfigFilename
-  elsif File.exists?("/etc/#{TorrentConfigFilename}")
-    configPath = "/etc/#{TorrentConfigFilename}"
-  else
-    $syslog.info "Error: Can't locate config file #{TorrentConfigFilename} in the current dir or in /etc."
+  configPath = Config::findConfigFile
+  if ! configPath
+    $syslog.info "Error: Can't locate config file #{Config::TorrentConfigFilename} in the current dir or in /etc."
     exit 1
   end
 

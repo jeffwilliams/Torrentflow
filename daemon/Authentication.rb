@@ -48,6 +48,9 @@ class Authentication
   end
 
   def addAccount(login, unhashedPassword)
+    if @accounts.has_key?login
+      raise "The account #{login} already exists"
+    end
     addAccountInternal($config.passwordFile, login, unhashedPassword)
   end
   
