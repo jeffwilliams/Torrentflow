@@ -31,6 +31,22 @@ Frontend:
   - Alternative to eRuby: ERB (embedded ruby)
 
 
+BUILDING:
+---------
+
+You will need:
+
+swig
+make
+g++
+libtorrent-rasterbar
+  - version 0.13.1-2+lenny1 or;
+  - version 0.14.10-2+b1
+  - later ones break the API
+libasio-dev
+ruby-dev
+
+
 INSTALLATION:
 -------------
 
