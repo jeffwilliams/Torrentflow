@@ -41,8 +41,8 @@ class GenericTcpServer
         begin
           clientHandlerProc.call(clientSock, addr, port)
         rescue => e
-          $syslog.info "Server: exception in client handler proc: #{$!}" if @doLog
-          puts e.backtrace
+          $syslog.info "Server: exception in client handler proc: #{$!}"
+          $syslog.info e.backtrace.join("  ")
         end
       }
     end

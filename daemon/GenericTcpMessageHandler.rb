@@ -29,7 +29,6 @@ class GenericTcpMessageHandler
 
   private 
   def readWithTimout(timeout)
-    oldflags = @socket.fcntl(F_GETFL)
     rc = select([@socket], nil, nil, timeout)
     if ! rc
       # Read timed out
@@ -46,8 +45,6 @@ class GenericTcpMessageHandler
     msg = @socket.read(len)
     return nil if ! msg
     rc = Marshal.load(msg)
-
-    @socket.fcntl(F_SETFL, oldflags)
     rc
   end
 end

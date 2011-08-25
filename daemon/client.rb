@@ -80,6 +80,7 @@ elsif ARGV[0] == "get"
   end
 
   begin
+client.readTimeout = 12
     type = :disk
     type = :url if ARGV[1] =~ /http:\/\//
     rc = client.getTorrent(ARGV[1], type)

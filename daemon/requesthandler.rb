@@ -13,7 +13,6 @@ require 'DataPoint'
 # sends back responses.
 class RequestHandler
   def initialize(terminateRequestHandler)
-    @genericHandler = nil
     @done = false
     @terminateRequestHandler = terminateRequestHandler
     @cachedDf = nil
@@ -21,16 +20,16 @@ class RequestHandler
   end
   
   def manage(sock, addr, port)
-    @genericHandler = GenericTcpMessageHandler.new(sock)
+    genericHandler = GenericTcpMessageHandler.new(sock)
     while ! @done  
-      req = @genericHandler.recv
+      req = genericHandler.recv
       if ! req
         sock.close
         break
       end
       resp = handle(req)
       if resp
-        @genericHandler.send resp
+        genericHandler.send resp
       end
     end
   
