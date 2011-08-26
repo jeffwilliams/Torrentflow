@@ -4,10 +4,10 @@ SidCookieName = "rubytorrent_sid"
 
 # Returns the client on success, and nil on failure. Yields any error messages
 # to the passed block.
-def createDaemonClient
+def createDaemonClient(port = 3000)
   client = nil
   begin
-    client = DaemonClient.new("localhost", 3000, 2)
+    client = DaemonClient.new("localhost", port, 2)
   rescue
     yield "Connecting to torrent daemon failed: #{$!}"
   end
