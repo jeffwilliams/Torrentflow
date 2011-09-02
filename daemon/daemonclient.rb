@@ -16,7 +16,9 @@ class DaemonClient
   attr_accessor :readTimeout
 
   def close
-    @clientSock.close
+    if ! @clientSock.closed?
+      @clientSock.close
+    end
   end
 
   # Returns the error message for the last operation

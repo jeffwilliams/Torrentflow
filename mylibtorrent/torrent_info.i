@@ -99,14 +99,24 @@ namespace libtorrent {
       }
 
       static libtorrent::torrent_info load(const char* path) const {
-        return libtorrent::torrent_info(load_entry(path));
+        try {
+          return libtorrent::torrent_info(load_entry(path));
+        } 
+        catch(libtorrent::invalid_torrent_file)
+        {
+          rb_raise(rb_eStandardError, "Invalid torrent file in TorrentInfo::load");
+        }  
+        catch(...)
+        {
+          rb_raise(rb_eStandardError, "Invalid torrent file (2) in TorrentInfo::load");
+        }  
       }
 
       static libtorrent::torrent_info load_bytes(const std::string bytes) const {
         std::istringstream in(bytes);
         return libtorrent::torrent_info(load_entry(in));
       }
-
     }
+
   };
 }

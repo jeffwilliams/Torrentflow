@@ -436,7 +436,11 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
 
     alerts = []
     list.each{ |alert|
-      alerts.push alert.message.to_s
+      if alert.respond_to?(:message)
+        alerts.push alert.message.to_s
+      else
+        alerts.push alert.msg.to_s
+      end
     }
     resp = DaemonGetAlertsResponse.new(alerts)
     resp
