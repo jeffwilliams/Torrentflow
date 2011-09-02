@@ -18,24 +18,35 @@ class GenericTcpMessageHandler
     if timeout
       return readWithTimout(timeout)
     end
-
-    binLen = @socket.read(4)
+    
+    binLen = nil
+    begin
+      binLen = @socket.read(4)
+    rescue
+    end
     return nil if ! binLen
     len = binLen.unpack("N")[0]
-    msg = @socket.read(len)
+    msg = nil
+    begin
+      msg = @socket.read(len)
+    rescue
+    end
     return nil if ! msg
     Marshal.load(msg)
   end
 
   private 
   def readWithTimout(timeout)
-    oldflags = @socket.fcntl(F_GETFL)
     rc = select([@socket], nil, nil, timeout)
     if ! rc
       # Read timed out
       raise "Read timed out after #{timeout} seconds"
     end
-    binLen = @socket.read(4)
+    binLen = nil
+    begin
+      binLen = @socket.read(4)
+    rescue
+    end
     return nil if ! binLen
     len = binLen.unpack("N")[0]
     rc = select([@socket], nil, nil, timeout)
@@ -43,11 +54,13 @@ class GenericTcpMessageHandler
       # Read timed out
       raise "Read timed out after #{timeout} seconds"
     end
-    msg = @socket.read(len)
+    msg = nil
+    begin
+      msg = @socket.read(len)
+    rescue
+    end
     return nil if ! msg
     rc = Marshal.load(msg)
-
-    @socket.fcntl(F_SETFL, oldflags)
     rc
   end
 end

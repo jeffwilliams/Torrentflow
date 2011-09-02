@@ -131,7 +131,7 @@ Signal.trap('SIGTERM'){
   handleSignal
 }
 
-genericServer = GenericTcpServer.new($config.listenPort, "0.0.0.0")
+genericServer = GenericTcpServer.new($config.listenPort, "0.0.0.0", false)
 
 terminateRequestHandler = Proc.new{
   genericServer.stop 

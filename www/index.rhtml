@@ -55,16 +55,20 @@
           # Use a higher timeout here
           oldTimeout = client.readTimeout
           client.readTimeout = 12
-          rc = client.getTorrent(url, :url)
-          client.readTimeout = oldTimeout
-          if ! rc
-            errorMessage = "Uploading torrent failed (1): #{client.errorMsg}"
-          else
-            if client.addTorrent(rc)
-              noticeMessage = "URL retrieved"
+          begin
+            rc = client.getTorrent(url, :url)
+            client.readTimeout = oldTimeout
+            if ! rc
+              errorMessage = "Uploading torrent failed (1): #{client.errorMsg}"
             else
-              errorMessage = "Adding torrent failed (2): #{client.errorMsg}"
+              if client.addTorrent(rc)
+                noticeMessage = "URL retrieved"
+              else
+                errorMessage = "Adding torrent failed (2): #{client.errorMsg}"
+              end
             end
+          rescue
+            errorMessage = "#{$!}. Please try again."
           end
         else
           errorMessage = "The form submission didn't include the variable torrenturl"
