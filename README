@@ -118,6 +118,10 @@ RUNNING
 TODO
 ----
 
+- Handle alert msg() or message() member properly. For some reason, Swig isn't detecting
+  LIBTORRENT_VERSION_MINOR correctly (it thinks it's 0 for some reason). May need a version for
+  .14 and one for .13.
+
 - Allow deletion of users from password file
 
 - Allow use of different ports. Currently 3000 is encoded in the Apache side - how to config www pages

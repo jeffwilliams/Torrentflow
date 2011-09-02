@@ -5,6 +5,7 @@ class Config
 
   def initialize
     @listenPort = 3000
+    @seedingTime = 3600
   end
   
   def load(filename)
@@ -60,6 +61,7 @@ class Config
 
   # Upload ratio
   attr_accessor :ratio
+  attr_accessor :seedingTime
 
   private 
   def handleYaml(yaml)
@@ -123,6 +125,12 @@ class Config
       end
     else
       @ratio = 0
+    end
+
+    @seedingTime = yaml['seedingtime']
+    if ! @seedingTime.is_a?(Integer)
+      $syslog.info "Error: the configuration file seedingtime setting is invalid. It must be an integer"
+      return false  
     end
 
     true

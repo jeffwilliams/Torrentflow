@@ -124,6 +124,7 @@ class RubyTorrentInfo
     }
     @downloadRateDataPoints = TimeSampleHolder.new(MaxDataPoints, avgProc)
     @graphDataThread = nil
+    @seedingStopThread = nil
   end
   # Name of the .torrent file
   attr_accessor :torrentFileName
@@ -143,24 +144,49 @@ class RubyTorrentInfo
       @graphDataThread.kill
     end
   end
+  def startSeedingStopThread(torrentHandle)
+    if ! @seedingStopThread
+      @seedingStopThread = SeedingStopThread.new(torrentHandle, $config.seedingTime)
+      @seedingStopThread.run
+    end
+  end
+  def stopSeedingStopThread
+    if  @seedingStopThread
+      @seedingStopThread.kill
+    end
+  end
+end
+
+class TorrentHandleBackgroundThread
+  def initialize(handle)  
+    @handle = handle
+    @done = false
+  end
+
+  attr_accessor :handle
+
+  def torrentIsRunning
+    (@handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING_METADATA ||
+      @handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING) &&
+      ! @handle.paused?
+  end
+
+  def kill
+    @done = true
+  end
 end
 
 #
 # This class measures the download rate periodically in KiloBytes/s
-class GraphDataThread
+class GraphDataThread < TorrentHandleBackgroundThread
   def initialize(handle, timeSampleHolder)
-    @handle = handle
+    super(handle)
     @timeSampleHolder = timeSampleHolder
     @timeSampleHolderMutex = Mutex.new
-    @done = false
   end
   
   attr_reader :timeSampleHolderMutex
   
-  def kill
-    @done = true
-  end
-
   def run
     Thread.new{ 
       begin
@@ -180,11 +206,57 @@ class GraphDataThread
       end    
     }
   end
+end
 
-  def torrentIsRunning
-    (@handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING_METADATA || 
-      @handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING) && 
-      ! @handle.paused?
+class SeedingStopThread < TorrentHandleBackgroundThread
+  def initialize(handle, maxUploadSeconds)
+    super(handle)
+    @maxUploadSeconds = maxUploadSeconds
+  end
+  
+  def run
+    Thread.new{ 
+      begin
+        startTime = Time.new
+        while ! @done
+
+          # Only add the sample if the torrent is running
+          if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
+            seconds = getTimeSeeding
+            if seconds && seconds  > @maxUploadSeconds
+              $syslog.info "The torrent #{@handle.info.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
+              if @handle.respond_to?(:auto_managed=)
+                @handle.auto_managed = false
+              else
+                $syslog.info "Can't un-auto-manage torrent since the version of libtorrent is too old"
+              end
+              @handle.pause
+              @done = true
+            end
+          end
+          sleep 10
+        end
+      rescue
+        puts "Exception in seeding monitoring thread: #{$!}"
+      end
+    }
+  end
+
+  def getTimeSeeding
+    # Get the latest modification date on the files in the torrent being downloaded, 
+    newest = nil
+    @handle.info.files.each{ |file|
+      path = $config.dataDir + "/" + file
+      if path && File.exists?(path)
+        newest = File.mtime(path)
+      end
+    }
+    if !newest
+      $syslog.info "Warning: The torrent #{@handle.info.name} is seeding, but has no files in the data dir"
+      nil
+    else
+      Time.new - newest
+    end
   end
 
 end
@@ -323,6 +395,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
           resp.errorMsg = "Deleting torrent file failed: #{$!}"
         end
         info.stopGraphDataThread
+        info.stopSeedingStopThread
         @torrentInfo.delete torrentName
       end
     end
@@ -627,6 +700,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       info = RubyTorrentInfo.new
       info.torrentFileName = filename
       info.startGraphDataThread(handle)
+      info.startSeedingStopThread(handle)
       @torrentInfo[torrentInfo.name] = info
       handle.ratio = $config.ratio
       true

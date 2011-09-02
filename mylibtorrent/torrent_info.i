@@ -92,8 +92,8 @@ namespace libtorrent {
         for (libtorrent::torrent_info::file_iterator i = self->begin_files();
              i != self->end_files(); ++i)
         {
-          VALUE obj = SWIG_NewPointerObj(SWIG_as_voidptr(&(*i)), SWIGTYPE_p_libtorrent__file_entry, 0);
-          if (obj != Qnil) rb_ary_push(array, obj);
+          VALUE rubyString = rb_str_new(i->path.string().c_str(), i->path.string().length());
+          if (rubyString != Qnil) rb_ary_push(array, rubyString);
         }
         return array;
       }
