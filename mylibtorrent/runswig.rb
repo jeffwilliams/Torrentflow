@@ -1,9 +1,10 @@
 #!/usr/bin/ruby
 swig = "swig"
-if ARGV.length > 0
-  swig = ARGV[0]
-end
-if system("#{swig} -autorename -c++ -ruby -o libtorrent.cpp libtorrent.i")
+args = ""
+swig = ARGV.shift if !ARGV.empty?
+args = ARGV.join(" ") if !ARGV.empty?
+
+if system("#{swig} #{args} -autorename -c++ -ruby -o libtorrent.cpp libtorrent.i")
   exit 0
 else
   exit 1

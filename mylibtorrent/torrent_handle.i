@@ -1,5 +1,4 @@
 %{
-#include "libtorrent/version.hpp"
 // In the debian version of boost, asio is still a separate library.
 #include "asio/ip/tcp.hpp"
 #include "libtorrent/torrent_handle.hpp"
@@ -56,7 +55,7 @@ namespace libtorrent {
     %rename("download_rate_limit") download_limit() const;
     int download_limit() const;
 
-#if LIBTORRENT_VERSION_MINOR != 13
+#if LIBTORRENT_VERSION_MINOR == 14
     %rename("auto_managed=") auto_managed(bool m) const;
     void auto_managed(bool m) const;
 #endif

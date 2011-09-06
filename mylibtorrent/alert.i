@@ -125,7 +125,7 @@ namespace libtorrent {
     tracker_announce_alert(torrent_handle const& h
       , std::string const& url_, int event_)
       : tracker_alert(h, url_)
-      , event(event_)
+      , event(event_);
 #endif
   };
   
