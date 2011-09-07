@@ -41,6 +41,8 @@ class Authentication
 
   # Returns true on success, false if the user cannot be authenticated
   def authorize(username, password)
+    # Reload the password file in case users were added/deleted
+    loadPasswordFile($config.passwordFile)
     acct = @accounts[username]
     return false if ! acct
     hashed = hashPassword(password, acct.salt)
@@ -86,6 +88,7 @@ class Authentication
   def loadPasswordFile(filename)
     if File.exists? filename
       File.open(filename, "r"){ |file|
+        @accounts.clear
         file.each_line{ |line|
           if line =~ /([^:]+):(.*):(.*)/
             @accounts[$1] = AccountInfo.new($1,$2,$3)

@@ -106,6 +106,8 @@ RUNNING
 TODO
 ----
 
+- Make pause actually pause torrents (make them not automanaged when paused)
+
 - Allow deletion of users from password file
 
 - Allow use of different ports. Currently 3000 is encoded in the Apache side - how to config www pages
