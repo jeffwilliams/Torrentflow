@@ -1,4 +1,8 @@
 
+Copyright: Portions of the ruby libtorrent-rasterbar wrapper code is taken from 
+  Joshua Bassett's libtorrent-ruby package, which was under the BSD license.
+
+
 Backend:
   - libtorrbent-rasterbar
   - Config files, passwd file
@@ -118,9 +122,7 @@ RUNNING
 TODO
 ----
 
-- Handle alert msg() or message() member properly. For some reason, Swig isn't detecting
-  LIBTORRENT_VERSION_MINOR correctly (it thinks it's 0 for some reason). May need a version for
-  .14 and one for .13.
+- Make pause actually pause torrents (make them not automanaged when paused)
 
 - Allow deletion of users from password file
 
