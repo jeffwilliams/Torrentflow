@@ -489,8 +489,14 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     resp = DaemonPauseTorrentResponse.new
     handle = findTorrentHandle(req.torrentName)
     if handle.paused?
+      if @handle.respond_to?(:auto_managed=)
+        @handle.auto_managed = true
+      end
       handle.resume
     else
+      if @handle.respond_to?(:auto_managed=)
+        @handle.auto_managed = false
+      end
       handle.pause
     end
     resp

@@ -17,7 +17,7 @@ $syslog = Syslog.open("ruby-torrent-daemon", Syslog::LOG_PID)
 
 # Become a daemon.
 def daemonize
-  puts "daemonizong"
+  puts "daemonizing"
   
   rc = fork
   if rc.nil?
