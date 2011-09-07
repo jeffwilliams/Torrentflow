@@ -517,7 +517,7 @@ function getNumPages()
 {
   if ( null != ajaxRetrievedTorrents_g )
   {
-    return 1 + Math.floor(ajaxRetrievedTorrents_g.length / torrentsPerPage_g);
+    return Math.ceil(ajaxRetrievedTorrents_g.length / torrentsPerPage_g);
   }
   else
   {

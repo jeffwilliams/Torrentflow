@@ -35,40 +35,39 @@ Frontend:
   - Alternative to eRuby: ERB (embedded ruby)
 
 
-BUILDING:
----------
-
-You will need:
-
-swig
-make
-g++
-libtorrent-rasterbar
-  - version 0.13.1-2+lenny1 or;
-  - version 0.14.10-2+b1
-  - later ones break the API
-libasio-dev
-ruby-dev
-
-
-INSTALLATION:
+DEPENDENCIES:
 -------------
 
-0. Building requires:
-  ruby1.8-dev
-  libtorrent-rasterbar-dev
-
-1. Install: 
+Running requires:
+  ruby (version 1.8)
   apache2
   libapache2-mod-ruby
   eruby
   libjson-ruby
+  libtorrent-rasterbar (version 0.13 or 0.14)
 
-2. Copy the ruby-torrent directory to the desired installation path. After this step,
+Building requires:
+
+  ruby1.8-dev
+  swig 1.3
+  make
+  g++
+  libtorrent-rasterbar-dev (version 0.13 or 0.14)
+  libasio-dev
+
+BUILDING:
+---------
+
+1. Change to the mylibtorrent directory and run ./extconf.rb
+
+INSTALLATION:
+-------------
+
+1. Copy the ruby-torrent directory to the desired installation path. After this step,
    later steps will use RUBY_TORRENT_HOME to refer to this path (the path includes the 
   ruby-torrent/ part).
 
-3. Add the following stanza to /etc/apache2/apache2.conf:
+2. Add the following stanza to /etc/apache2/apache2.conf:
 
     <IfModule mod_ruby.c>
       # for Apache::ERubyRun
@@ -88,9 +87,9 @@ INSTALLATION:
 
   But replace RUBY_TORRENT_HOME with the real home. 
 
-4. In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex variable
+3. In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex variable
 
-5. Make a symbolic link from the web-accessible directory under the apache root where 
+4. Make a symbolic link from the web-accessible directory under the apache root where 
    you would like rubytorrent to be accessible to the www directory of rubytorrent. 
 
    For example, if apache home is /var/www/ and you want to be able to access rubytorrent
