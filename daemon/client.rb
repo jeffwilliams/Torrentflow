@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 
 require 'daemonclient'
+require 'config'
 
 commands = 
 {
@@ -23,10 +24,24 @@ if ARGV.size <= 0 || !commands.has_key?(ARGV[0])
   exit 1
 end
 
+  port = 3000
+  # Try and load the port from the config file
 
 client = nil
 begin
-  client = DaemonClient.new("localhost", 3000, 2)
+  port = 3000
+  configFile = Config.findConfigFile
+  if configFile
+    config = Config.new
+    if config.load(configFile, true)
+      port = config.listenPort
+    else
+      puts "Daemon configuration file is invalid. See syslog for details"
+      exit 1
+    end
+  end
+
+  client = DaemonClient.new("localhost", port, 2)
 rescue
   puts "Connecting failed: #{$!}"
   exit 1

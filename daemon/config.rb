@@ -1,4 +1,5 @@
 require 'yaml'
+require 'SyslogWrapper'
 
 class Config
   TorrentConfigFilename = "torrentflowdaemon.conf"
@@ -8,15 +9,18 @@ class Config
     @seedingTime = 3600
   end
   
-  def load(filename)
+  # If dontValidateDirs is set, then the directories are not checked to 
+  # see if they exist, etc. This should be set to true by non-daemon code that '
+  # is reading the config file.
+  def load(filename, dontValidateDirs = false)
     rc = true
     if File.exists?(filename)
       File.open(filename){ |fh|
         yaml = YAML::load(fh)
-        return handleYaml(yaml)
+        return handleYaml(yaml, dontValidateDirs)
       }
     else
-      $syslog.info "Loading config file failed: file '#{filename}' doesn't exist."
+      SyslogWrapper.instance.info "Loading config file failed: file '#{filename}' doesn't exist."
     end
     rc
   end
@@ -64,16 +68,16 @@ class Config
   attr_accessor :seedingTime
 
   private 
-  def handleYaml(yaml)
+  def handleYaml(yaml, dontValidateDirs = false)
     @listenPort = yaml['port'].to_i
     
     @torrentFileDir = yaml['torrent_file_dir']
-    return false if ! validateDir(@torrentFileDir, 'torrent_file_dir')
+    return false if ! dontValidateDirs && ! validateDir(@torrentFileDir, 'torrent_file_dir')
     @dataDir = yaml['data_dir']
-    return false if ! validateDir(@dataDir, 'data_dir')
+    return false if ! dontValidateDirs && ! validateDir(@dataDir, 'data_dir')
     @passwordFile = yaml['password_file']
     if ! @passwordFile
-      $syslog.info "Error: the configuration file had no 'password_file' setting."
+      SyslogWrapper.instance.info "Error: the configuration file had no 'password_file' setting."
       return false
     end
 
@@ -81,16 +85,16 @@ class Config
     @torrentPortHigh = yaml['torrent_port_high'].to_i
 
     if ! @torrentPortLow || ! @torrentPortHigh
-      $syslog.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are missing."
+      SyslogWrapper.instance.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are missing."
       return false
     end
 
     if @torrentPortLow > @torrentPortHigh
-      $syslog.info "Error: the configuration file torrent_port_low is > torrent_port_high."
+      SyslogWrapper.instance.info "Error: the configuration file torrent_port_low is > torrent_port_high."
       return false
     end
     if @torrentPortLow == 0 || @torrentPortHigh == 0
-      $syslog.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are invalid."
+      SyslogWrapper.instance.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are invalid."
       return false
     end
 
@@ -100,19 +104,19 @@ class Config
 
     @outEncPolicy = validateAndConvertEncPolicy(@outEncPolicy)
     if ! @outEncPolicy
-      $syslog.info "Error: the configuration file out_enc_policy setting is invalid"
+      SyslogWrapper.instance.info "Error: the configuration file out_enc_policy setting is invalid"
       return false
     end
 
     @inEncPolicy = validateAndConvertEncPolicy(@inEncPolicy)
     if ! @inEncPolicy
-      $syslog.info "Error: the configuration file in_enc_policy setting is invalid"
+      SyslogWrapper.instance.info "Error: the configuration file in_enc_policy setting is invalid"
       return false
     end
 
     @allowedEncLevel = validateAndConvertEncLevel(@allowedEncLevel)
     if ! @allowedEncLevel
-      $syslog.info "Error: the configuration file allowed_enc_level setting is invalid"
+      SyslogWrapper.instance.info "Error: the configuration file allowed_enc_level setting is invalid"
       return false
     end
 
@@ -120,7 +124,7 @@ class Config
     if @ratio
       f = @ratio.to_f
       if f != 0.0 && f < 1.0
-        $syslog.info "Error: the configuration file ratio setting is invalid. Ratio must be 0, or a number >= 1.0"
+        SyslogWrapper.instance.info "Error: the configuration file ratio setting is invalid. Ratio must be 0, or a number >= 1.0"
         return false
       end
     else
@@ -129,7 +133,7 @@ class Config
 
     @seedingTime = yaml['seedingtime']
     if ! @seedingTime.is_a?(Integer)
-      $syslog.info "Error: the configuration file seedingtime setting is invalid. It must be an integer"
+      SyslogWrapper.instance.info "Error: the configuration file seedingtime setting is invalid. It must be an integer"
       return false  
     end
 
@@ -137,20 +141,21 @@ class Config
   end 
   
   def validateDir(dir, settingName)
+    dir.untaint
     if ! dir
-      $syslog.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
+      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
       return false;
     elsif ! File.exists?(dir)
-      $syslog.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
+      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
       return false;
     elsif ! File.directory?(dir)
-      $syslog.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
+      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
       return false;
     elsif ! File.writable?(dir)
-      $syslog.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
+      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
       return false;
     elsif ! File.readable?(dir)
-      $syslog.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
+      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
       return false;
     end
   

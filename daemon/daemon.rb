@@ -6,14 +6,12 @@
 # torrent status.
 #
 
-require 'syslog'
+require 'SyslogWrapper'
 require 'OptionHandler'
 require 'GenericTcpServer'
 require 'GenericTcpMessageHandler'
 require 'config'
 require 'requesthandler'
-
-$syslog = Syslog.open("torrentflow-daemon", Syslog::LOG_PID)
 
 # Become a daemon.
 def daemonize
@@ -45,7 +43,7 @@ def daemonize
 end
 
 def handleSignal
-  $syslog.info "Shutting down because of signal."
+  SyslogWrapper.instance.info "Shutting down because of signal."
   exit 0
 end
 
@@ -87,7 +85,7 @@ def parseConfig
   # Find config file
   configPath = Config::findConfigFile
   if ! configPath
-    $syslog.info "Error: Can't locate config file #{Config::TorrentConfigFilename} in the current dir or in /etc."
+    SyslogWrapper.instance.info "Error: Can't locate config file #{Config::TorrentConfigFilename} in the current dir or in /etc."
     exit 1
   end
 
@@ -121,7 +119,7 @@ end
 File.umask(0002)
 
 daemonize if $optDaemonize
-$syslog.info "Started."
+SyslogWrapper.instance.info "Started."
 
 # Setup signal handlers
 Signal.trap('SIGINT'){ 
@@ -145,9 +143,9 @@ begin
       requestHandler.manage(clientSock, addr, port)
     }         
   ){ 
-    $syslog.info "Listening on port #{$config.listenPort}."
+    SyslogWrapper.instance.info "Listening on port #{$config.listenPort}."
   }
 rescue
-  $syslog.info "Got exception at top level: #{$!}"
-  $syslog.info "#{$!.backtrace.join("  ")}"
+  SyslogWrapper.instance.info "Got exception at top level: #{$!}"
+  SyslogWrapper.instance.info "#{$!.backtrace.join("  ")}"
 end
