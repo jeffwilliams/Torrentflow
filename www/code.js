@@ -650,13 +650,14 @@ function showOverlay(torrentInfo)
     url,
 
     {
+      title: "Download Rate while downloading",
       xlabel: "Time (minutes)",
       ylabel: "Rate (KB/s)"
     }
   );
   } catch(err)
   {
-alert ("error: " + err.description);
+    alert ("error: " + err.description);
   }
 
   return false;

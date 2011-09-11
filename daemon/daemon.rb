@@ -13,7 +13,7 @@ require 'GenericTcpMessageHandler'
 require 'config'
 require 'requesthandler'
 
-$syslog = Syslog.open("ruby-torrent-daemon", Syslog::LOG_PID)
+$syslog = Syslog.open("torrentflow-daemon", Syslog::LOG_PID)
 
 # Become a daemon.
 def daemonize
@@ -51,7 +51,7 @@ end
 
 def printHelp
   puts "Usage: #{$0} [options]"
-  puts "The ruby torrent daemon."
+  puts "The torrentflow daemon."
   puts ""
   puts "Options: "
   puts "  -x:             Don't become a daemon; stay in the foreground"

@@ -1,44 +1,26 @@
+Torrentflow README
+------------------
 
-Copyright: Portions of the ruby libtorrent-rasterbar wrapper code is taken from 
-  Joshua Bassett's libtorrent-ruby package, which was under the BSD license.
+Torrentflow is a web-based torrent client, inspired by TorrentFlux. It uses Rasterbar's 
+libtorrent for managing torrents, and so supports the latest torrent features (such as 
+UDP trackers).
+
+Torrentflow consists of a daemon that performs the downloading, and a web application
+that acts as the user interface.
 
 
-Backend:
-  - libtorrbent-rasterbar
-  - Config files, passwd file
+ACKNOWLEGEMENTS
+---------------
 
-Controller: 
-  - A ruby daemon that contains the libtorrent session.
-
-Frontend:
-  - Apache
-  - eRuby
-    - Install eruby, mod_ruby
-    - In /etc/apache2/apache2.conf add:
-
-    <IfModule mod_ruby.c>
-      # for Apache::ERubyRun
-      RubyRequire apache/eruby-run
-
-      # handle *.rhtml as eruby files.
-      <Files *.rhtml>
-        SetHandler ruby-object
-        RubyHandler Apache::ERubyRun.instance
-      </Files>
-
-      AddType text/html .rhtml
-    </IfModule>
-  - In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex varialbe
- 
-  - RubyAddPath: <http://www.modruby.net/en/doc/?ApacheDirectives>
-
-  - Alternative to eRuby: ERB (embedded ruby)
+Portions of the ruby libtorrent-rasterbar wrapper code is taken from Joshua Bassett's 
+libtorrent-ruby package, which was under the BSD license.
 
 
 DEPENDENCIES:
 -------------
 
 Running requires:
+
   ruby (version 1.8)
   apache2
   libapache2-mod-ruby
@@ -53,19 +35,21 @@ Building requires:
   make
   g++
   libtorrent-rasterbar-dev (version 0.13 or 0.14)
-  libasio-dev
+  libasio-dev (if not installed as part of boost)
+
 
 BUILDING:
 ---------
 
 1. Change to the mylibtorrent directory and run ./extconf.rb
 
+
 INSTALLATION:
 -------------
 
-1. Copy the ruby-torrent directory to the desired installation path. After this step,
-   later steps will use RUBY_TORRENT_HOME to refer to this path (the path includes the 
-  ruby-torrent/ part).
+1. Copy the torrentflow directory to the desired installation path. After this step,
+   later steps will use TORRENTFLOW_HOME to refer to this path (the path includes the 
+   torrentflow/ part).
 
 2. Add the following stanza to /etc/apache2/apache2.conf:
 
@@ -73,8 +57,8 @@ INSTALLATION:
       # for Apache::ERubyRun
       RubyRequire apache/eruby-run
  
-      RubyAddPath RUBY_TORRENT_HOME/daemon
-      RubyAddPath RUBY_TORRENT_HOME/www-lib
+      RubyAddPath TORRENTFLOW_HOME/daemon
+      RubyAddPath TORRENTFLOW_HOME/www-lib
    
       # handle *.rhtml as eruby files.
       <Files *.rhtml>
@@ -85,43 +69,44 @@ INSTALLATION:
       AddType text/html .rhtml
     </IfModule>
 
-  But replace RUBY_TORRENT_HOME with the real home. 
+  But replace TORRENTFLOW_HOME with the real home. 
 
 3. In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex variable
 
 4. Make a symbolic link from the web-accessible directory under the apache root where 
-   you would like rubytorrent to be accessible to the www directory of rubytorrent. 
+   you would like torrentflow to be accessible to the www directory of torrentflow. 
 
-   For example, if apache home is /var/www/ and you want to be able to access rubytorrent
-   as http://host/rubytorrent, then:
+   For example, if apache home is /var/www/ and you want to be able to access torrentflow
+   as http://host/torrentflow, then:
 
       cd /var/www/
-      ln -s RUBY_TORRENT_HOME/www rubytorrent
+      ln -s TORRENTFLOW_HOME/www torrentflow 
+
+5. Edit the configuration file torrentflowdeamon.conf and set appropriate settings for the 
+   parameters.
 
 RUNNING
 -------
 
-1. Change to the directory RUBY_TORRENT_HOME/daemon and add some user accounts ./adduser.rb
+1. Change to the directory TORRENTFLOW_HOME/daemon and add some user accounts ./adduser.rb
   
     ./adduser <username> <password>
 
    If you add more users later, you must restart the daemon for it to detect the changes.
 
-2. Change to the directory RUBY_TORRENT_HOME/daemon and start daemon.rb:
+2. Change to the directory TORRENTFLOW_HOME/daemon and start daemon.rb:
 
     ./daemon.rb
 
    and let it run in the background. For debugging, pass the -x option to prevent it 
-   from daemonizing.
+   from daemonizing. The daemon logs to syslog, so check syslog to see if it prints any
+   errors.
 
-
-3. Browse to the rubytorrent webpage and login.
+3. Browse to the torrentflow webpage and login.
 
 
 TODO
 ----
-
-- Make pause actually pause torrents (make them not automanaged when paused)
 
 - Allow deletion of users from password file
 

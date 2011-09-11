@@ -264,4 +264,6 @@ form
   height: 20em;
   border: 1px solid #000000;
   margin: 0.125em;
+  /* Workaround for vertical text on the graph label not working */
+  margin-left: 4em;
 }

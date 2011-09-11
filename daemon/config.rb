@@ -1,7 +1,7 @@
 require 'yaml'
 
 class Config
-  TorrentConfigFilename = "rubytorrentdeamon.conf"
+  TorrentConfigFilename = "torrentflowdaemon.conf"
 
   def initialize
     @listenPort = 3000
@@ -26,7 +26,7 @@ class Config
   # If found it returns the full path, if not it returns nil.
   def self.findConfigFile
     $:.reverse.each{ |e|
-      path = "#{e}/rubytorrentdeamon.conf"
+      path = "#{e}/#{TorrentConfigFilename}"
       return path if File.exists? path
     } 
   
