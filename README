@@ -104,14 +104,3 @@ RUNNING
 
 3. Browse to the torrentflow webpage and login.
 
-
-TODO
-----
-
-- Allow deletion of users from password file
-
-- Allow use of different ports. Currently 3000 is encoded in the Apache side - how to config www pages
-  - Could use an env var: RubySetEnv LANG "ja_JP.eucJP"
-  - See http://www.modruby.net/en/index.rbx?mode=search&word=shugo#label-15
-
-- Use fast-resume data for torrents
