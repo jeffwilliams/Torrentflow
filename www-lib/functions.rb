@@ -1,15 +1,30 @@
 require 'daemonclient'
+require 'config'
 
 SidCookieName = "rubytorrent_sid"
 
 # Returns the client on success, and nil on failure. Yields any error messages
 # to the passed block.
-def createDaemonClient(port = 3000)
+def createDaemonClient
   client = nil
+
+  port = 3000
+  # Try and load the port from the config file
+  configFile = Config.findConfigFile
+  if configFile
+    config = Config.new
+    if config.load(configFile, true)
+      port = config.listenPort
+    else
+      yield "Daemon configuration file is invalid. See syslog for details"
+      return nil
+    end
+  end
+
   begin
     client = DaemonClient.new("localhost", port, 2)
   rescue
-    yield "Connecting to torrent daemon failed: #{$!}"
+    yield "Connecting to torrent daemon on port #{port} failed: #{$!}"
   end
   client
 end
