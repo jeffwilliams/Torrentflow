@@ -638,7 +638,8 @@ function showOverlay(torrentInfo)
   getNodeAndSetText('overlay_ratio_col', ratio);
 
   // Generate the graph
-  var url = "get_torrentgraphdata.rhtml?name=" + torrentInfo['name'];
+  var name = torrentInfo['name'].replace('+','%2B'); // encodeURIComponent on firefox doesn't handle + properly
+  var url = "get_torrentgraphdata.rhtml?name=" + encodeURIComponent(name);
   var elem = document.getElementById("graphdiv");
   try{
   g = new Dygraph(

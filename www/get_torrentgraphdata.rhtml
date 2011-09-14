@@ -1,12 +1,13 @@
 <%
   require 'functions'
+  require 'cgi'
   errorMessage = nil
 
   torrentName = nil
   Apache.request.paramtable.each{ |k,v|
     k.untaint
     if k == 'name'
-      torrentName = v.to_s
+      torrentName = CGI.unescape(v.to_s)
     end
   }
 

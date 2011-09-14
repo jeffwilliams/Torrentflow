@@ -11,7 +11,8 @@ commands =
   "get" => "Get a torrent and copy it to the torrents dir",
   "kill" => "Terminate the torrent daemon",
   "alerts" => "Get the latest alerts. If a second parameter is specified, only alerts for that torrent name are returned",
-  "fsinfo" => "Get fsinfo"
+  "fsinfo" => "Get fsinfo",
+  "graphdata" => "Get graph data for the named torrent"
 }
 
 if ARGV.size <= 0 || !commands.has_key?(ARGV[0])
@@ -139,6 +140,22 @@ elsif ARGV[0] == "fsinfo"
     puts "usePercent: #{rc.usePercent}"
   else
     puts "Getting fs info failed"
+  end
+elsif ARGV[0] == "graphdata"
+  if ARGV.size < 2
+    puts "The graphdata command expects the name of a file."
+    exit 1
+  end
+
+  begin
+    data = client.getGraphInfo(ARGV[1])
+    puts "Torrent has #{data.size} data points"
+    data.each{ |point|
+      puts "minute: #{point.x}\t\trate (KB/s) #{point.y}"
+    }
+  rescue
+    puts "Operation failed: #{$!}"
+    puts $!.backtrace.join("\n")
   end
 end
 

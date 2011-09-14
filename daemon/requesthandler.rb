@@ -555,7 +555,8 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     info = @torrentInfo[req.torrentId] 
     if ! info
       resp.successful = false
-      resp.errorMsg = "No torrent info for '#{torrentName}'"
+      resp.errorMsg = "No torrent info for '#{req.torrentId}'"
+      return resp
     end
 
     data = []
