@@ -1,4 +1,5 @@
 require 'socket'
+require 'SyslogWrapper'
 include Socket::Constants
 
 class GenericTcpServer
@@ -35,19 +36,19 @@ class GenericTcpServer
 
       port, addr = Socket.unpack_sockaddr_in(client_sockaddr)
       if @doLog
-        $syslog.info "Server: Got connection from #{addr}:#{port}" if @doLog
+        SyslogWrapper.instance.info "Server: Got connection from #{addr}:#{port}" if @doLog
       end
       Thread.new(clientSock, addr, port){ |clientSock, addr, port|
         begin
           clientHandlerProc.call(clientSock, addr, port)
         rescue => e
-          $syslog.info "Server: exception in client handler proc: #{$!}"
-          $syslog.info e.backtrace.join("  ")
+          SyslogWrapper.instance.info "Server: exception in client handler proc: #{$!}"
+          SyslogWrapper.instance.info e.backtrace.join("  ")
         end
       }
     end
     @socket.close
-    $syslog.info "Server: exiting" if @doLog
+    SyslogWrapper.instance.info "Server: exiting" if @doLog
   end
 
   def stop

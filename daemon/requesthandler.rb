@@ -8,6 +8,7 @@ require 'Authentication'
 require 'Formatter'
 require 'TimeSampleHolder'
 require 'DataPoint'
+require 'SyslogWrapper'
 
 # This class is used to manage a single client socket. It waits for requests and 
 # sends back responses.
@@ -34,7 +35,7 @@ class RequestHandler
     end
   
     if ! @done
-      #$syslog.info "Client #{addr}:#{port} disconnected. Closing socket."
+      #SyslogWrapper.instance.info "Client #{addr}:#{port} disconnected. Closing socket."
     end
   end
 
@@ -65,7 +66,7 @@ class RequestHandler
     elsif req.is_a? DaemonGraphInfoRequest
       handleGraphInfoRequest req
     else
-      $syslog.info "Got an unknown request type #{req.class}"
+      SyslogWrapper.instance.info "Got an unknown request type #{req.class}"
       nil
     end
   end
@@ -224,11 +225,11 @@ class SeedingStopThread < TorrentHandleBackgroundThread
           if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
             seconds = getTimeSeeding
             if seconds && seconds  > @maxUploadSeconds
-              $syslog.info "The torrent #{@handle.info.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
+              SyslogWrapper.instance.info "The torrent #{@handle.info.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
               if @handle.respond_to?(:auto_managed=)
                 @handle.auto_managed = false
               else
-                $syslog.info "Can't un-auto-manage torrent since the version of libtorrent is too old"
+                SyslogWrapper.instance.info "Can't un-auto-manage torrent since the version of libtorrent is too old"
               end
               @handle.pause
               @done = true
@@ -252,7 +253,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
       end
     }
     if !newest
-      $syslog.info "Warning: The torrent #{@handle.info.name} is seeding, but has no files in the data dir"
+      SyslogWrapper.instance.info "Warning: The torrent #{@handle.info.name} is seeding, but has no files in the data dir"
       nil
     else
       Time.new - newest
@@ -286,7 +287,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         begin
           loadAndAddTorrent(path, file)
         rescue
-          $syslog.info "Failed to load #{path}: it is not a valid torrent"
+          SyslogWrapper.instance.info "Failed to load #{path}: it is not a valid torrent"
         end
       end
     }
@@ -416,7 +417,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       begin
         FileUtils.cp(req.sourcePath, destpath)
       rescue
-        $syslog.info "Error: handleGetTorrentRequest: Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
+        SyslogWrapper.instance.info "Error: handleGetTorrentRequest: Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
         resp.successful = false
         resp.errorMsg = "Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
         return resp
@@ -443,7 +444,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
           end
         }
       rescue
-        $syslog.info "Error: handleGetTorrentRequest: Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
+        SyslogWrapper.instance.info "Error: handleGetTorrentRequest: Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
         resp.successful = false
         resp.errorMsg = "Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
       end
@@ -452,7 +453,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleTerminateRequest(req)
-    $syslog.info "Terminating at user request."
+    SyslogWrapper.instance.info "Terminating at user request."
     resp = DaemonTerminateResponse.new
     resp.successful = true
     terminate

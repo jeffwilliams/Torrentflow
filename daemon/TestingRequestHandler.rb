@@ -1,3 +1,4 @@
+require 'SyslogWrapper'
 class TestingRequestHandler < RequestHandler
 
   def initialize(terminateRequestHandler)
@@ -93,7 +94,7 @@ class TestingRequestHandler < RequestHandler
       begin
         FileUtils.cp(req.sourcePath, destpath)
       rescue
-        $syslog.info "Error: handleGetTorrentRequest: Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
+        SyslogWrapper.instance.info "Error: handleGetTorrentRequest: Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
         resp.successful = false
         resp.errorMsg = "Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
         return resp
@@ -125,7 +126,7 @@ class TestingRequestHandler < RequestHandler
           end
         }
       rescue
-        $syslog.info "Error: handleGetTorrentRequest: Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
+        SyslogWrapper.instance.info "Error: handleGetTorrentRequest: Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
         resp.successful = false
         resp.errorMsg = "Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
       end
@@ -134,7 +135,7 @@ class TestingRequestHandler < RequestHandler
   end
 
   def handleTerminateRequest(req)
-    $syslog.info "Terminating at user request."
+    SyslogWrapper.instance.info "Terminating at user request."
     resp = DaemonTerminateResponse.new
     resp.successful = true
     terminate
