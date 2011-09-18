@@ -67,6 +67,11 @@ class Config
   attr_accessor :ratio
   attr_accessor :seedingTime
 
+  attr_accessor :maxConnectionsPerTorrent
+  attr_accessor :maxUploadsPerTorrent
+  attr_accessor :downloadRateLimitPerTorrent
+  attr_accessor :uploadRateLimitPerTorrent
+
   private 
   def handleYaml(yaml, dontValidateDirs = false)
     @listenPort = yaml['port'].to_i
@@ -137,6 +142,26 @@ class Config
       return false  
     end
 
+    @maxConnectionsPerTorrent = yaml['max_connections_per_torrent']
+    if @maxConnectionsPerTorrent
+      return false if ! validateInteger(@maxConnectionsPerTorrent, 'max_connections_per_torrent')
+    end
+
+    @maxUploadsPerTorrent = yaml['max_uploads_per_torrent']
+    if @maxUploadsPerTorrent
+      return false if ! validateInteger(@maxUploadsPerTorrent, 'max_uploads_per_torrent')
+    end
+
+    @downloadRateLimitPerTorrent = yaml['download_rate_limit_per_torrent']
+    if @downloadRateLimitPerTorrent
+      return false if ! validateInteger(@downloadRateLimitPerTorrent, 'download_rate_limit_per_torrent')
+    end
+
+    @uploadRateLimitPerTorrent = yaml['upload_rate_limit_per_torrent']
+    if @uploadRateLimitPerTorrent
+      return false if ! validateInteger(@uploadRateLimitPerTorrent, 'upload_rate_limit_per_torrent')
+    end
+
     true
   end 
   
@@ -183,6 +208,15 @@ class Config
       return :both
     else
       return nil
+    end
+  end
+
+  def validateInteger(s, settingName)
+    if s.is_a?(Integer)
+      true
+    else
+      SyslogWrapper.instance.info "Error: #{settingName} must be an integer but is '#{s}'"
+      false
     end
   end
 end

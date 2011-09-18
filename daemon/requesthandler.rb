@@ -711,6 +711,10 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       info.startSeedingStopThread(handle)
       @torrentInfo[torrentInfo.name] = info
       handle.ratio = $config.ratio
+      handle.max_connections = $config.maxConnectionsPerTorrent if $config.maxConnectionsPerTorrent
+      handle.max_uploads = $config.maxUploadsPerTorrent if $config.maxUploadsPerTorrent
+      handle.download_rate_limit = $config.downloadRateLimitPerTorrent if $config.downloadRateLimitPerTorrent
+      handle.upload_rate_limit = $config.uploadRateLimitPerTorrent if $config.uploadRateLimitPerTorrent
       true
     else
       yield torrentInfo if block_given?
