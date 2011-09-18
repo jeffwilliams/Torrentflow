@@ -22,6 +22,35 @@ namespace libtorrent {
     %rename("NONE") none;
     enum severity_t { debug, info, warning, critical, fatal, none };
 
+#if LIBTORRENT_VERSION_MINOR == 14
+    %rename("ERROR_NOTIFICATION") error_notification;
+    %rename("PEER_NOTIFICATION") peer_notification;
+    %rename("PORT_MAPPING_NOTIFICATION") port_mapping_notification;
+    %rename("STORAGE_NOTIFICATION") storage_notification;
+    %rename("TRACKER_NOTIFICATION") tracker_notification;
+    %rename("DEBUG_NOTIFICATION") debug_notification;
+    %rename("STATUS_NOTIFICATION") status_notification;
+    %rename("PROGRESS_NOTIFICATION") progress_notification;
+    %rename("IP_BLOCK_NOTIFICATION") ip_block_notification;
+    %rename("PERFORMANCE_WARNING") performance_warning;
+    %rename("ALL_CATEGORIES") all_categories;
+      
+    enum category_t
+    {
+      error_notification = 0x1,
+      peer_notification = 0x2,
+      port_mapping_notification = 0x4,
+      storage_notification = 0x8,
+      tracker_notification = 0x10,
+      debug_notification = 0x20,
+      status_notification = 0x40,
+      progress_notification = 0x80,
+      ip_block_notification = 0x100,
+      performance_warning = 0x200,
+      all_categories = 0xffffffff
+    };
+#endif
+
     /*boost::posix_time::ptime timestamp() const;*/
 #if LIBTORRENT_VERSION_MINOR == 13  
     %rename("message") msg() const;

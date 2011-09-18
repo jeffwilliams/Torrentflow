@@ -29,7 +29,7 @@ def stateToS(state)
     "queued for checking"
   elsif state == Libtorrent::TorrentStatus::CHECKING_FILES ;
     "checking_files"
-  elsif state == Libtorrent::TorrentStatus::CONNECTING_TO_TRACKER
+  elsif defined?(Libtorrent::TorrentStatus::CONNECTING_TO_TRACKER) && state == Libtorrent::TorrentStatus::CONNECTING_TO_TRACKER
     "connecting to tracker"
   elsif state == Libtorrent::TorrentStatus::DOWNLOADING_METADATA
     "downloading metadata"
@@ -61,9 +61,9 @@ def printTorrentSummary(torrentHandle)
 end
 
 session = Libtorrent::Session.new
+session.alertMask = Libtorrent::Alert::STATUS_NOTIFICATION;
 
-
-Torrent = "debian-6.0.1a-i386-netinst.iso.torrent"
+Torrent = "debian-6.0.2.1-i386-netinst.iso.torrent"
 # Load the test torrent file
 torrentInfo = Libtorrent::TorrentInfo::load(Torrent)
 puts 
@@ -101,6 +101,12 @@ while true
       exitAt = Time.new + 5
     end
   }
+
+  alerts = session.alerts
+  alerts.each{ |a|
+    puts "Alert: #{a.message}"
+  }
+  
   sleep 2
 
 end

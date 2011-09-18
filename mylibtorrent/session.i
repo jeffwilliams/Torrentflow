@@ -11,20 +11,25 @@ namespace libtorrent
     session(fingerprint const& print = fingerprint("LT", 
       LIBTORRENT_VERSION_MAJOR, LIBTORRENT_VERSION_MINOR, 0, 0));
 
-		session(
-			fingerprint const& print,
+    session(
+      fingerprint const& print,
       std::pair<int, int> listen_port_range,
-			char const* listen_interface = "0.0.0.0");
+      char const* listen_interface = "0.0.0.0");
   
     ~session();
 
     %rename("NONE") none;
     %rename("DELETE_FILES") delete_files;
-		enum options_t
-		{
-			none = 0,
-			delete_files = 1
-		};
+    enum options_t
+    {
+      none = 0,
+      delete_files = 1
+    };
+
+#if LIBTORRENT_VERSION_MINOR == 14
+    %rename("alertMask=") set_alert_mask(int m);
+    void set_alert_mask(int m);
+#endif
 
     void remove_torrent(const torrent_handle& h, int options = none);
     torrent_handle find_torrent(sha1_hash const& info_hash) const;
@@ -161,16 +166,16 @@ namespace libtorrent
       , storage_constructor_type sc = default_storage_constructor) TORRENT_DEPRECATED;
 */
 /*
-		torrent_handle add_torrent(
-			char const* tracker_url
-			, sha1_hash const& info_hash
-			, char const* name
-			, fs::path const& save_path
-			, entry const& resume_data = entry()
-			, storage_mode_t storage_mode = storage_mode_sparse
-			, bool paused = false
-			, storage_constructor_type sc = default_storage_constructor
-			, void* userdata = 0);
+    torrent_handle add_torrent(
+      char const* tracker_url
+      , sha1_hash const& info_hash
+      , char const* name
+      , fs::path const& save_path
+      , entry const& resume_data = entry()
+      , storage_mode_t storage_mode = storage_mode_sparse
+      , bool paused = false
+      , storage_constructor_type sc = default_storage_constructor
+      , void* userdata = 0);
 */
 
   };
