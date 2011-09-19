@@ -74,14 +74,19 @@ class TimeSampleHolder
     toGen = getGeneration(fromGenNum+1)
 #puts "Compact gen #{fromGenNum} of size #{fromGen.size}"
 
-    fromGen.size.times{ |i|
-      # average this sample and the previous
-      if (i % 2 == 1)
-        val = @avgProc.call(fromGen[i], fromGen[i-1])
-        toGen.push val
-        @totalSize += 1
-      end 
-    }  
+    # Make sure we don't go below one sample
+    if fromGen.size == 1
+      toGen.push fromGen.first
+    else
+      fromGen.size.times{ |i|
+        # average this sample and the previous
+        if (i % 2 == 1)
+          val = @avgProc.call(fromGen[i], fromGen[i-1])
+          toGen.push val
+          @totalSize += 1
+        end 
+      }
+    end  
     @totalSize -= fromGen.size
     fromGen.clear
   end
@@ -90,75 +95,126 @@ end
 
 
 # Testing
-
 =begin
 
+
 testAvg = Proc.new{ |a,b|
-  a + b / 2
+  TestSample.new( (a.x + b.x)/2, (a.y + b.y)/2 )
 }
 
+class TestSample
+  def initialize(x,y)
+    @x = x
+    @y = y
+  end
+
+  attr_accessor :x
+  attr_accessor :y
+
+  def to_s
+    "#{@x}  #{@y}"
+  end
+end
+
 holder = TimeSampleHolder.new(100, testAvg)
+
+$sampleX = 0
+def nextSample
+  rc = TestSample.new($sampleX, 50)
+  $sampleX += 10
+  rc
+end
+
 puts
 puts "Inserting 50 samples"
 50.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 49 samples"
 49.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 1 sample"
 1.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 1 sample"
 1.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 49 samples"
 49.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 1 sample"
 1.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 25 samples"
 25.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 56 samples"
 56.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
 
 puts
 puts "Inserting 1 sample"
 1.times{ |i|
-  holder.addSample(i)
+  holder.addSample(nextSample)
 }
 puts holder
+
+puts 
+puts "Inserting 1000 samples"
+1000.times{ |i|
+  holder.addSample(nextSample)
+}
+
+#holder.samples.each{ |s| puts s.to_s }
+puts holder
+stats = holder.samples.collect{ |s| s.x }
+puts "Arr:"
+IO.popen("stats.rb","w"){ |io|
+  io.puts stats.join("\n")
+}
+
+
+puts 
+puts "Inserting 1000 samples"
+1000.times{ |i|
+  holder.addSample(nextSample)
+}
+
+holder.samples.each{ |s| puts s.to_s }
+puts holder
+stats = holder.samples.collect{ |s| s.x }
+puts "Arr:"
+IO.popen("stats.rb","w"){ |io|
+  io.puts stats.join("\n")
+}
 
 =end

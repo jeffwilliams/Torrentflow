@@ -32,6 +32,9 @@
       points.each{ |p|
         puts "#{"%.3f" % p.x},#{"%.3f" % p.y}\n"
       }
+      if points.size == 0
+        puts "0.0,0.0"
+      end
     end
   end
   

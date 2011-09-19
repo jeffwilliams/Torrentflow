@@ -28,7 +28,9 @@
     if torrents 
       # Send the array of TorrentInfo objects as JSON
       rc = ["success"]
-      rc.concat torrents
+      # Limit to last 100 alerts
+      maxAlerts = 100
+      rc.concat torrents[torrents.size-maxAlerts,maxAlerts]
       puts JSON.generate(rc)
     end 
     client.close

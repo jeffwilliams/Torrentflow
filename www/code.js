@@ -666,7 +666,7 @@ function showOverlay(torrentInfo)
 
 function addAlertsToOverlay(alerts)
 {
-  node = document.getElementById('overlay_alerts_div');
+  node = document.getElementById('overlay_alerts_textarea');
   var children = node.childNodes;
   for( var n = 0; n < children.length; n++)
   {
@@ -676,7 +676,7 @@ function addAlertsToOverlay(alerts)
   }
   for(var i = 0; i < alerts.length; i++)
   {
-    var newText = document.createTextNode(alerts[i]);
+    var newText = document.createTextNode(alerts[i] + "\n");
     var newElem = document.createElement('br');
     node.appendChild(newText);
     node.appendChild(newElem);

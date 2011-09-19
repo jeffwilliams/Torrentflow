@@ -267,3 +267,10 @@ form
   /* Workaround for vertical text on the graph label not working */
   margin-left: 4em;
 }
+
+#overlay_alerts_textarea
+{
+  width: 100%;
+  height: 15em;
+  border: 1px solid #000000;
+}
