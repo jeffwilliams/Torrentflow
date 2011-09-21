@@ -115,7 +115,7 @@ function getDetailedTorrentInfo(torrentName, callback)
 {
   params = {'creator' : 1, 'comment' : 1, 'progress' : 1, 'num_peers' : 1, 'download_rate' : 1,
     'upload_rate' : 1, 'total_size' : 1, 'state' : 1, 'upload_limit' : 1, 'download_limit' : 1,
-    'ratio' : 1};
+    'ratio' : 1, 'max_connections' : 1, 'max_uploads' : 1};
 
   if( torrentName )
   {
@@ -636,6 +636,8 @@ function showOverlay(torrentInfo)
     ratio = "upload forever";
   }
   getNodeAndSetText('overlay_ratio_col', ratio);
+  getNodeAndSetText('overlay_max_connections_col', torrentInfo['max_connections']);
+  getNodeAndSetText('overlay_max_uploads_col', torrentInfo['max_uploads']);
 
   // Generate the graph
   var name = torrentInfo['name'].replace('+','%2B'); // encodeURIComponent on firefox doesn't handle + properly

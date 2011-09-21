@@ -346,6 +346,10 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
           info.values[:download_limit] = Formatter.formatSpeed(i.download_rate_limit)
         elsif :ratio == d
           info.values[:ratio ] = $config.ratio
+        elsif :max_connections == d
+          info.values[:max_connections] = $config.maxConnectionsPerTorrent
+        elsif :max_uploads == d
+          info.values[:max_uploads] = $config.maxUploadsPerTorrent
         end
       }
 
