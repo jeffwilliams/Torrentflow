@@ -42,6 +42,7 @@
 
   if client
     if ! sessionIsValid?(client, Apache.request)
+      client.close
       client = nil
       errorMessage = "Your session has expired, or you need to log in"
     end
