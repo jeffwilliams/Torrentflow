@@ -30,7 +30,11 @@
       rc = ["success"]
       # Limit to last 100 alerts
       maxAlerts = 100
-      rc.concat torrents[torrents.size-maxAlerts,maxAlerts]
+      if torrents.size > maxAlerts
+        rc.concat torrents[torrents.size-maxAlerts,maxAlerts]
+      else
+        rc.concat torrents
+      end
       puts JSON.generate(rc)
     end 
     client.close
