@@ -46,7 +46,7 @@ p
   width: 100%;
 }
 
-#torrents_table_inprogress, #torrents_table_title
+#torrents_table_inprogress, #torrents_table_title, #file_table
 {
   background-color: #669966; 
   border-collapse: collapse;
@@ -216,6 +216,11 @@ form
 .selcol
 {
   width: 1em
+}
+
+.modifiedcol
+{
+  width: 9em;
 }
 
 #overlay

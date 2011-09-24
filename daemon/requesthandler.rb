@@ -9,6 +9,8 @@ require 'Formatter'
 require 'TimeSampleHolder'
 require 'DataPoint'
 require 'SyslogWrapper'
+require 'pathname'
+require 'FileInfo'
 
 # This class is used to manage a single client socket. It waits for requests and 
 # sends back responses.
@@ -65,6 +67,8 @@ class RequestHandler
       handleFsInfoRequest req
     elsif req.is_a? DaemonGraphInfoRequest
       handleGraphInfoRequest req
+    elsif req.is_a? DaemonListFilesRequest
+      handleListFilesRequest req
     else
       SyslogWrapper.instance.info "Got an unknown request type #{req.class}"
       nil
@@ -111,6 +115,9 @@ class RequestHandler
     raise "Override this method"
   end
   def handleGraphInfoRequest(req)
+    raise "Override this method"
+  end
+  def handleListFilesRequest(req)
     raise "Override this method"
   end
 end
@@ -284,6 +291,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     Dir.new($config.torrentFileDir).each{ |file|
       if file != '.' && file != '..'
         path = "#{$config.torrentFileDir}/#{file}"
+        next if ! File.file?(path)
         begin
           loadAndAddTorrent(path, file)
         rescue
@@ -575,6 +583,48 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       data = info.downloadRateDataPoints.samples
     end
     resp.dataPoints = data
+
+    resp
+  end
+
+  def handleListFilesRequest(req)
+    resp = DaemonListFilesResponse.new
+    absDataDir = Pathname.new($config.dataDir).realpath.to_s
+    # If the dir specified is nil, then assume the request is for the datadir.
+    if ! req.dir
+      absRequestedDir = absDataDir
+    else
+      if ! File.exists?(req.dir)
+        resp.successful = false
+        resp.errorMsg = "The directory #{absRequestedDir} doesn't exist"
+        return resp
+      end
+      absRequestedDir = Pathname.new(req.dir).realpath.to_s
+      # Don't allow listing of directories above datadir
+      absRequestedDir = absDataDir if ! absRequestedDir =~ /^#{absDataDir}/
+    end
+
+    resp.dir = absRequestedDir
+    Dir.new(absRequestedDir).each{ |file|
+      if file != '.'
+        info = FileInfo.createFrom(absRequestedDir, file)
+        info.size = Formatter.formatSize(info.size)
+        resp.files.push info
+      end
+    }
+  
+    # Sort the files so that directories are at the top, then files, and both are
+    # sorted alphabetically.
+    resp.files.sort!{ |a,b|
+      ta = a.type == :dir ? 0 : 1
+      tb = b.type == :dir ? 0 : 1
+
+      rc = ta <=> tb
+      if rc == 0
+        rc = a.name.downcase <=> b.name.downcase
+      end
+      rc
+    }  
 
     resp
   end

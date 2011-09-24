@@ -12,7 +12,8 @@ commands =
   "kill" => "Terminate the torrent daemon",
   "alerts" => "Get the latest alerts. If a second parameter is specified, only alerts for that torrent name are returned",
   "fsinfo" => "Get fsinfo",
-  "graphdata" => "Get graph data for the named torrent"
+  "graphdata" => "Get graph data for the named torrent",
+  "listfiles" => "Get a list of files under the data dir. If an argument is passed, gets the files under that directory"
 }
 
 if ARGV.size <= 0 || !commands.has_key?(ARGV[0])
@@ -153,6 +154,26 @@ elsif ARGV[0] == "graphdata"
     data.each{ |point|
       puts "minute: #{point.x}\t\trate (KB/s) #{point.y}"
     }
+  rescue
+    puts "Operation failed: #{$!}"
+    puts $!.backtrace.join("\n")
+  end
+elsif ARGV[0] == "listfiles"
+  dir = nil
+  if ARGV.size >= 2
+    dir = ARGV[1]
+  end
+
+  begin
+    dirContents = client.listFiles(dir)
+    if dirContents
+      puts "Directory #{dirContents.dir} contains: "
+      dirContents.files.each{ |file|
+        puts "  #{file.name}#{file.type == :dir ? "/" : ""} \t\t#{file.size}"
+      }
+    else
+      puts "Operation failed: #{client.errorMsg}"
+    end
   rescue
     puts "Operation failed: #{$!}"
     puts $!.backtrace.join("\n")
