@@ -200,6 +200,19 @@ class TestingRequestHandler < RequestHandler
         resp.files.push info
       end
     }
+
+    # Sort the files so that directories are at the top, then files, and both are
+    # sorted alphabetically.
+    resp.files.sort!{ |a,b|
+      ta = a.type == :dir ? 0 : 1
+      tb = b.type == :dir ? 0 : 1
+
+      rc = ta <=> tb
+      if rc == 0
+        rc = a.name.downcase <=> b.name.downcase
+      end
+      rc
+    }  
   
     resp
   end

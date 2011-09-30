@@ -204,7 +204,7 @@
             end
           %>
           <div class="torrenttabletitle">
-            <span>Files</span><br>
+            <span id="files_title">Files</span><br>
           </div>
           <form method="post" action="index.rhtml">
             <div class="torrenttablebuttons">
@@ -229,7 +229,7 @@
           </form>
             <div class="torrenttablebuttons">
               <p>
-              <span id="page_label">Page 1/1</span> <button onclick="prevPage(); return false" id="prev_page" class="buttonlinkenabled">prev</button> <button onclick="nextPage(); return false" id="next_page" class="buttonlinkenabled">next</button>
+              <span id="page_label">Page 1/1</span> <button onclick="pageHandler_g.prevPage(); return false" id="prev_page" class="buttonlinkenabled">prev</button> <button onclick="pageHandler_g.nextPage(); return false" id="next_page" class="buttonlinkenabled">next</button>
               </p>
             </div>
         </div>

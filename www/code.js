@@ -468,7 +468,7 @@ function addRowTd(row, field, cssClass)
 
 /*
  * Set the text values of all the TD elements under a TR element for a table 
- * that is meant to contain torrent info.
+ * that is meant to contain torrent or file info. 
  */
 function setRowValues(row, torrentInfo)
 {
@@ -634,7 +634,6 @@ function PageHandler_nextPage()
     this.currentPage++;
     if ( null != this.onPageChange )
     {
-      //updateTorrents(false);   
       this.onPageChange();
     }
   }
@@ -851,6 +850,8 @@ function confirmFilesDelete()
 
 // Current directory to show the contents when showFiles is called.
 var currentFilesDir_g = null;
+// Set of files under the current dir
+var currentFiles_g = null;
 
 
 /*
@@ -869,12 +870,10 @@ function refillTable(tableId, files)
  
   // Delete all rows
   var rows = table.getElementsByTagName("tr");
-  for(var i = 0; i < rows.length; i++)
+  while ( rows.length > 1 )
   {
-    var row = rows[1];
-    row.parentNode.removeChild(row);
+    rows[1].parentNode.removeChild(rows[1]);
   }
-
  
   for(var i = 0; i < files.length; i++)
   {
@@ -895,14 +894,28 @@ function setJavascriptErrorToFirstElem(arr)
   para.setAttribute("class","note");
 }
 
-function updateFiles(files)
+function updateFiles()
 {
-  // Directory is first argument
-  var dir = files.shift();
-  //files = pageHandler_ggetTorrentsVisibleOnPageCurrentPage(torrentInfoArray);
-  //pageHandler_g.updatePagesUi();
+  pageHandler_g.items = currentFiles_g;
+  files = pageHandler_g.getItemsVisibleOnCurrentPage();
+  pageHandler_g.updatePagesUi();
   refillTable('file_table', files);
   updateStatusLine();
+}
+
+function handleRetrievedFiles(files)
+{
+  // Directory is first element
+  currentFilesDir_g = files.shift();
+
+  var dirElem = document.getElementById("files_title");
+  if ( null != dirElem )
+  {
+    setNodeText(dirElem, "Files under " + currentFilesDir_g );
+  }
+
+  currentFiles_g = files;
+  updateFiles();
 }
 
 function showFiles()
@@ -910,7 +923,8 @@ function showFiles()
   if ( null == pageHandler_g )
   {
     pageHandler_g = new PageHandler();
+    pageHandler_g.onPageChange = updateFiles;
   }
-  getFilesUsingAjax(currentFilesDir_g, updateFiles, setJavascriptErrorToFirstElem);
+  getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
 }
 
