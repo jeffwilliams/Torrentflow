@@ -279,3 +279,8 @@ form
   height: 15em;
   border: 1px solid #000000;
 }
+
+.table_icon
+{
+  margin-right: 0.250em;
+}

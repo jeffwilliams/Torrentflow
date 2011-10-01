@@ -423,17 +423,6 @@ function addRowTds(row, fields, styles)
     }
   }
 
-/*
-  addRowTd(row, 'name', '')
-  addRowTd(row, 'total_size','sizecol')
-  addRowTd(row, 'state', 'statuscol')
-  addRowTd(row, 'rates', 'ratescol')
-  addRowTd(row, 'progress', 'progresscol')
-  addRowTd(row, 'estimated_time', 'timecol')
-  var details = addRowTd(row, 'details', 'detailscol')
-  var sel = addRowTd(row, 'sel', 'selcol')
-*/
-  
   // Handle details and sel specially
   if ( null != details )
   {
@@ -479,7 +468,16 @@ function setRowValues(row, torrentInfo)
     var field = tds[td].getAttribute('field');
     if ( torrentInfo[field] )
     { 
-      setNodeText(tds[td], torrentInfo[field]);
+      // If the user passed a string, set that as the text in the td. 
+      // If an object was passed, assume that it's a DOM node to be added as a child of the td.
+      if ( typeof(torrentInfo[field]) == "string" )
+      {
+        setNodeText(tds[td], torrentInfo[field]);
+      }
+      else
+      {
+        setNodeChild(tds[td], torrentInfo[field]);
+      }
     }
     else if ( field == 'sel' && torrentInfo['name'] )
     {
@@ -535,6 +533,21 @@ function appendToNodeText(td, text)
     var textNode = td.childNodes[0];
     textNode.nodeValue = textNode.nodeValue + text;
   }
+}
+
+/*
+ * Set the child of the specified node to be the passed element. Existing children
+ * are removed.
+ */
+function setNodeChild(node, elem)
+{
+  var children = node.childNodes;
+  for( var n = 0; n < node.childNodes.length; n++)
+  {
+    var child = node.childNodes[n];
+    node.removeChild(child);
+  }
+  node.appendChild(elem);
 }
 
 function getNodeAndSetText(id, text)
@@ -881,10 +894,65 @@ function refillTable(tableId, files)
     var newRow = table.insertRow(-1);
     
     addRowTds(newRow, filesTableFields, filesTableStyles);
+
+    // Modify the name of the fileInfo object to include an icon representing the 
+    // type of the file
+    var oldName = fileInfo['name'];
+    fileInfo['name'] = makeElementWithIconForFile(fileInfo);
     setRowValues(newRow, fileInfo);
+    fileInfo['name'] = oldName;
   }
 
   setRowStyles(rows);
+}
+
+function makeElementWithIconForFile(fileInfo)
+{
+  var span = document.createElement('span');
+ 
+  var img = document.createElement('img');
+  if ( fileInfo.type == "dir" )
+  {
+    img.src = "icons/orange_folder.png";
+  }
+  else
+  {
+    img.src = "icons/document.png";
+  }
+  img.setAttribute("class", "table_icon");
+  span.appendChild(img);
+
+  var newText = document.createTextNode(fileInfo['name']);
+  if ( fileInfo.type == "dir" )
+  {
+    var link = document.createElement('a');
+    link.href = "#";
+    link.onclick = handleClickedFile;
+    span.appendChild(link);
+    link.appendChild(newText);
+  }
+  else
+  {
+    span.appendChild(newText);
+  }
+
+  return span;
+}
+
+function handleClickedFile(e)
+{
+  if (!e) var e = window.event;
+
+  // this refers to the HTML element which currently handles the event
+  // target/srcElement refer to the HTML element the event originally took place on
+
+  var dirname = e.target.firstChild.data;
+  currentFilesDir_g = currentFilesDir_g + "/" + dirname;
+alert("New dir: " + currentFilesDir_g);
+  getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
+
+  e.cancelBubble = true;
+  if (e.stopPropagation) e.stopPropagation();
 }
 
 function setJavascriptErrorToFirstElem(arr)
