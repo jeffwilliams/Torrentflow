@@ -3,17 +3,13 @@ require 'config'
 require 'Authentication'
 
 $config = Config.new
-TorrentConfigFilename = "rubytorrentdeamon.conf"
 def parseConfig
-  configPath = nil
   
   # Find config file
-  if File.exists?(TorrentConfigFilename)
-    configPath = TorrentConfigFilename
-  elsif File.exists?("/etc/#{TorrentConfigFilename}")
-    configPath = "/etc/#{TorrentConfigFilename}"
-  else
-    $syslog.info "Error: Can't locate config file #{TorrentConfigFilename} in the current dir or in /etc."
+  configPath = Config.findConfigFile
+
+  if ! configPath
+    puts "Error: unable to find configuration file."
     exit 1
   end
 
