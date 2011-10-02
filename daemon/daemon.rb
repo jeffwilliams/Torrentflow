@@ -12,6 +12,7 @@ require 'GenericTcpServer'
 require 'GenericTcpMessageHandler'
 require 'config'
 require 'requesthandler'
+require 'TestingRequestHandler'
 
 # Become a daemon.
 def daemonize
@@ -136,7 +137,8 @@ terminateRequestHandler = Proc.new{
 }
 
 begin
-  requestHandler = RasterbarLibtorrentRequestHandler.new(terminateRequestHandler)
+  #requestHandler = RasterbarLibtorrentRequestHandler.new(terminateRequestHandler)
+  requestHandler = TestingRequestHandler.new(terminateRequestHandler)
   genericServer.start( 
     Proc.new{ |clientSock, addr, port|
       #requestHandler = TestingRequestHandler.new(terminateRequestHandler)

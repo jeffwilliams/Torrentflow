@@ -169,8 +169,7 @@
     <script language="javascript" src="prototype.js"></script>
     <script language="javascript" src="code.js"></script>
   </head>
-<!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
-   <body onload="startTorrentsUpdates();"> 
+   <body onload="showFiles();"> 
     <div id="maindiv_border">
         <div id="maindiv">
           <div id="title">
@@ -204,56 +203,20 @@
               puts "</p>"
             end
           %>
-          <div class="inputs">
-            <!--<h2>Add Torrents</h2>-->
-            <table>
-            <tr>
-              <td>
-                <form method="post" enctype="multipart/form-data" action="index.rhtml">
-                  Torrent URL: </td><td><input type="text" name="torrenturl" /> <input type="submit" value="Get file" />
-                  <input type="hidden" name="action" value="download_torrent"/>
-                </form>
-              </td>
-            </tr>
-            <tr>
-              
-              <td>
-                <form method="post" enctype="multipart/form-data" action="index.rhtml">
-                  Torrent upload: </td><td> <input type="file" name="torrentfile" value="browse..." /> <input type="submit" value="Upload" />
-                  <input type="hidden" name="action" value="upload_torrent"/>
-                </form>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <form method="post" action="index.rhtml">
-                  <input type="hidden" name="action" value="logout"/>
-                  <input type="submit" name="action" value="logout"/>
-                </form>
-              </td>
-            </tr>
-            </table>
-          </div>
-
-
           <div class="torrenttabletitle">
-            <span>Torrents</span><br>
+            <span id="files_title">Files</span><br>
           </div>
           <form method="post" action="index.rhtml">
             <div class="torrenttablebuttons">
-                <input type="submit" name="pause" value="Pause"> <input type="submit" name="remove_torrent" value="Remove Torrent"> <input type="submit" name="remove_files" onclick="return confirmFilesDelete()" value="Remove Files">
+                <input type="submit" name="delete_file" value="Delete"> 
             </div>
             <div class="fullwidth">
                 <input type="hidden" name="action" value="modify_torrents"/>
-                <table id="torrents_table_inprogress">
+                <table id="file_table">
                   <tr>
                     <th>Name</th>
+                    <th class="modifiedcol">Modified</th>
                     <th class="sizecol">Size</th>
-                    <th class="statuscol">Status</th>
-                    <th class="ratescol">Rates (down|up)</th>
-                    <th class="progresscol">Progress</th>
-                    <th class="timecol">Estimated time</th>
-                    <th class="detailscol">Details</th>
                     <th class="selcol">Sel</th>
                   </tr>
                   <tbody>
@@ -271,45 +234,6 @@
             </div>
         </div>
     </div>
-  
-    <!-- This is the overlay div -->
-    <div id="overlay">
-      <h1 class="overlaytitle" id="overlay_title">Title</h1>
-      <p>
-        <table>
-          <tr><td>
-            <table>
-              <tr><th>Creator</th><td id="overlay_creator_col"></td></tr>
-              <tr><th>Comment</th><td id="overlay_comment_col"></td></tr>
-              <tr><th>Size</th><td id="overlay_size_col"></td></tr>
-              <tr><th>Status</th><td id="overlay_status_col"></td></tr>
-              <tr><th>Progress</th><td id="overlay_progress_col"></td></tr>
-              <tr><th>Peers</th><td id="overlay_peers_col"></td></tr>
-              <tr><th>Download Rate</th><td id="overlay_downloadrate_col"></td></tr>
-              <tr><th>Upload Rate</th><td id="overlay_uploadrate_col"></td></tr>
-              <tr><th>Download Rate Limit</th><td id="overlay_downloadratelimit_col"></td></tr>
-              <tr><th>Upload Rate Limit</th><td id="overlay_uploadratelimit_col"></td></tr>
-              <tr><th>Upload Ratio</th><td id="overlay_ratio_col"></td></tr>
-              <tr><th>Max Connections</th><td id="overlay_max_connections_col"></td></tr>
-              <tr><th>Max Uploads</th><td id="overlay_max_uploads_col"></td></tr>
-            </table>
-          </td>
-          <td>
-            <div id="graphdiv">
-              Graph is here
-            <div>
-          </td></tr>
-        <table>
-      </p>
-      <div class="indented">
-        <h2>Alerts:</h2>
-        <textarea id="overlay_alerts_textarea">
-        </textarea>
-        <div id="overlay_alerts_div">
-        </div>
-      </div>
-      <button class="hidebutton" onclick="hideOverlay();">hide</button>
-    </div>
   </body>
 
 </html>
@@ -317,3 +241,4 @@
 <% 
   end # if authenticated
 %>
+

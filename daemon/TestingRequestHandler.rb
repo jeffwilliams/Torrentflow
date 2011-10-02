@@ -1,4 +1,6 @@
 require 'SyslogWrapper'
+require 'DataPoint'
+
 class TestingRequestHandler < RequestHandler
 
   def initialize(terminateRequestHandler)
@@ -139,6 +141,79 @@ class TestingRequestHandler < RequestHandler
     resp = DaemonTerminateResponse.new
     resp.successful = true
     terminate
+    resp
+  end
+
+  def handleLoginRequest(req)
+    resp = DaemonLoginResponse.new
+    resp.successful = true
+    resp.sid = "1234567890abcdefghijklmnop";
+    resp
+  end
+
+  def handleLogoutRequest(req)
+    resp = DaemonLogoutResponse.new
+    resp
+  end
+
+  def handleAuthSessionRequest(req)
+    resp = DaemonAuthSessionResponse.new
+    resp.successful = true
+    resp
+  end
+
+  def handleGetAlertsRequest(req)
+    alerts = []
+    resp = DaemonGetAlertsResponse.new(alerts)
+    resp
+  end
+
+  def handleFsInfoRequest(req)
+    resp = DaemonFsInfoResponse.new
+      resp.totalSpace = '100M'
+      resp.usedSpace = '10M'
+      resp.freeSpace = '90M'
+      resp.usePercent = '10%'
+    resp
+  end
+
+  def handleGraphInfoRequest(req)
+    resp = DaemonGraphInfoResponse.new
+
+    data = []
+    data.push DataPoint.new(0, 0)
+    data.push DataPoint.new(1, 5)
+    data.push DataPoint.new(2, 20)
+    data.push DataPoint.new(3, 30)
+    resp.dataPoints = data
+
+    resp
+  end
+
+  def handleListFilesRequest(req)
+    resp = DaemonListFilesResponse.new
+    resp.dir = "."
+    Dir.new(".").each{ |file|
+      if file != '.'
+        info = FileInfo.createFrom(".", file)
+        info.size = Formatter.formatSize(info.size)
+        resp.files.push info
+      end
+    }
+
+    # Sort the files so that directories are at the top, then files, and both are
+    # sorted alphabetically.
+    resp.files.sort!{ |a,b|
+      ta = a.type == :dir ? 0 : 1
+      tb = b.type == :dir ? 0 : 1
+
+      rc = ta <=> tb
+      if rc == 0
+        rc = a.name.downcase <=> b.name.downcase
+      end
+      rc
+    }  
+  
     resp
   end
 end

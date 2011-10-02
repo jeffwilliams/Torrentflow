@@ -46,7 +46,7 @@ p
   width: 100%;
 }
 
-#torrents_table_inprogress, #torrents_table_title
+#torrents_table_inprogress, #torrents_table_title, #file_table
 {
   background-color: #669966; 
   border-collapse: collapse;
@@ -218,6 +218,11 @@ form
   width: 1em
 }
 
+.modifiedcol
+{
+  width: 9em;
+}
+
 #overlay
 {
   z-index: 1000;
@@ -273,4 +278,9 @@ form
   width: 100%;
   height: 15em;
   border: 1px solid #000000;
+}
+
+.table_icon
+{
+  margin-right: 0.250em;
 }

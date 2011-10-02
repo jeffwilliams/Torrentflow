@@ -3,6 +3,7 @@ require 'GenericTcpClient'
 require 'GenericTcpMessageHandler'
 require 'protocol'
 require 'DataPoint'
+require 'FileInfo'
 
 class DaemonClient
   def initialize(addr, port, readTimeout = nil)
@@ -146,6 +147,20 @@ class DaemonClient
       rc = resp.dataPoints
     }
     rc
+  end
+
+  # List the files in the specified subdirectory of the dataDir. Pass nil to 
+  # get the contents of the dataDir itself.
+  # Returns a DirContents object on success, or nil on failure.
+  def listFiles(dir = nil)
+    req = DaemonListFilesRequest.new(dir)
+    sendAndRecv(req){ |resp|
+      if resp.successful
+        DirContents.new(resp.dir, resp.files)
+      else
+        nil
+      end
+    }
   end
 
   private

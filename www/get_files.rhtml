@@ -1,0 +1,48 @@
+<%
+  #
+  # This method returns a JSON-encoded array of file-info objects on success.
+  # The first element of the array is not a file info object, but is instead 
+  # the string "success" on success, or an error message on failure. 
+  #
+
+  require 'functions'
+  require "json" 
+
+  attribs = []
+  attribsHash = {}
+
+  dir = Apache.request.paramtable['dir'].to_s
+  dir.untaint
+  dir = nil if dir.length == 0
+
+  errorMessage = nil
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    if ! sessionIsValid?(client, Apache.request)
+      client.close
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if client
+    dirContents = client.listFiles(dir)
+    if dirContents
+      # Send the array of TorrentInfo objects as JSON
+      encoded = dirContents.files.collect{ |f|
+        {'name' => f.name, 'type' => f.type.to_s, 'size' => f.size}
+      }
+      rc = ["success", dirContents.dir]
+      #rc.concat encoded
+      rc.concat encoded
+      puts JSON.generate(rc)
+    end 
+    client.close
+  else 
+    puts JSON.generate([errorMessage])
+  end
+%>
+

@@ -3,17 +3,17 @@ DygraphLayout=function(a){this.dygraph_=a;this.datasets=new Array();this.annotat
 // The interval in milliseconds at which the torrent info is refreshed.
 var torrentUpdateInterval = 2000;
 
-/*
- * Test function
- */
-function testUpdateTable(tableId)
-{
-  torrentInfo1 = { "name":"Game of Thrones episode 1", "total_size":"500MB", "state":"downloading", "estimated_time":"1h" };
-  torrentInfo2 = { "name":"Nurse Jackie S01E01", "total_size":"523MB","state":"downloading", "estimated_time":"50m" };
-  updateTable(tableId, [torrentInfo1,torrentInfo2]);
-}
 
 var ajaxRetrievedTorrents_g = null
+
+// The page handler object
+var pageHandler_g = null;
+
+var torrentTableFields = ['name', 'total_size', 'state', 'rates', 'progress', 'estimated_time', 'details', 'sel'];
+var torrentTableStyles = ['', 'sizecol', 'statuscol', 'ratescol', 'progresscol', 'timecol', 'detailscol', 'selcol'];
+
+var filesTableFields = ['name', 'modified', 'size', 'sel'];
+var filesTableStyles = ['', 'modifiedcol', 'sizecol', 'selcol'];
 
 /*
  * This function should get the up-to-date torrent information. It will probably
@@ -56,9 +56,9 @@ function getTorrentInfoArray()
  */
 function startTorrentsUpdates()
 {
-  // Repeatedly update the set of torrents the user sees
-  //updateTorrents(true);
-  
+  pageHandler_g = new PageHandler();
+  pageHandler_g.onPageChange = updateTorrentsNoRepeat;
+
   // Repeatedly get the set of torrent info from the daemon and store it in a 
   // global var.
   getTorrentsUsingAjax();
@@ -89,7 +89,6 @@ function getTorrentsUsingAjax()
         }
         else
         {
-          // A string was returned instead of an array: an error occurred
           setNodeText(para, "Error: " + successful);
           para.setAttribute("class","note");
           ajaxRetrievedTorrents_g = []
@@ -206,6 +205,40 @@ function getFsInfo(callbackSuccess, callbackError)
   );
 }
 
+function getFilesUsingAjax(dir, callbackSuccess, callbackError)
+{
+  params = {};
+  if ( null != dir )
+  {
+    params['dir'] = dir;
+  }
+
+  new Ajax.Request('get_files.rhtml',
+    {
+      method: 'get',
+      parameters: params,
+      onSuccess: function(transport){
+        var para = document.getElementById("javascript_error");
+        // Parse the JSON response 
+        resp = transport.responseText.evalJSON();
+        successful = resp.shift();
+
+        if (successful == "success")
+        {
+          callbackSuccess(resp);
+        }
+        else
+        { 
+          callbackError(successful);
+        }
+        
+      },
+      onFailure: function(){
+      }
+    }
+  );
+}
+
 
 function torrentSort(t1,t2)
 {
@@ -242,10 +275,11 @@ function torrentStateToSortingNum(state)
 
 function updateTorrents(repeat)
 {
-  //testUpdateTable('torrents_table_inprogress');
+  pageHandler_g.items = ajaxRetrievedTorrents_g;
+
   torrentInfoArray = getTorrentInfoArray();
-  torrentInfoArray = getTorrentsVisibleOnPageCurrentPage(torrentInfoArray);
-  updatePagesUi();
+  torrentInfoArray = pageHandler_g.getItemsVisibleOnCurrentPage();
+  pageHandler_g.updatePagesUi();
   updateTable('torrents_table_inprogress', torrentInfoArray);
   updateStatusLine();
 
@@ -253,6 +287,11 @@ function updateTorrents(repeat)
   {
     setTimeout("updateTorrents(true)", torrentUpdateInterval);
   }
+}
+
+function updateTorrentsNoRepeat()
+{
+  updateTorrents(false);
 }
 
 /*
@@ -321,7 +360,7 @@ function updateTable(tableId, torrentInfoArray)
       var newRow = table.insertRow(-1);
       newRow.setAttribute("code", torrentInfo['name']);
     
-      addRowTds(newRow);
+      addRowTds(newRow, torrentTableFields, torrentTableStyles);
       setRowValues(newRow, torrentInfo);
       newRow.do_delete = false;
     }
@@ -353,31 +392,55 @@ function findRowByCode(rows, code)
 
 /*
  * Add all the TD elements under a TR element for a table 
- * that is meant to contain torrent info.
+ * that is meant to contain file or torrent info.
+ *
+ * fields should be a list of field names; for each one a td element is added
+ * with the field property set to the field name. styles should be a parallel array
+ * with the style property to set for each td.
  */
-function addRowTds(row)
+function addRowTds(row, fields, styles)
 {
-  addRowTd(row, 'name', '')
-  addRowTd(row, 'total_size','sizecol')
-  addRowTd(row, 'state', 'statuscol')
-  addRowTd(row, 'rates', 'ratescol')
-  addRowTd(row, 'progress', 'progresscol')
-  addRowTd(row, 'estimated_time', 'timecol')
-  var details = addRowTd(row, 'details', 'detailscol')
-  var sel = addRowTd(row, 'sel', 'selcol')
-  
-  // Handle details and sel specially
-  var detailsLink = document.createElement('button'); 
-  detailsLink.onclick = torrentDetailsClicked;
-  details.appendChild(detailsLink);
-  var newText = document.createTextNode("details");
-  detailsLink.appendChild(newText);
+  if ( fields.length != styles.length )
+  {
+    alert("Invalid call to addRowTds made: the fields and styles arrays have different lengths");
+  }
 
-  var selCheck = document.createElement('input');
-  selCheck.setAttribute("type","checkbox");
-  selCheck.setAttribute("name","check");
-  selCheck.setAttribute("value","torrent_name");
-  sel.appendChild(selCheck);
+  var details = null;
+  var sel = null;
+  for(var i = 0; i < fields.length; i++)
+  {
+    if ( fields[i] == 'details' )
+    {
+      details = addRowTd(row, fields[i], styles[i]);
+    }
+    else if ( fields[i] == 'sel' )
+    {
+      sel = addRowTd(row, fields[i], styles[i]);
+    }
+    else
+    {
+      addRowTd(row, fields[i], styles[i]);
+    }
+  }
+
+  // Handle details and sel specially
+  if ( null != details )
+  {
+    var detailsLink = document.createElement('button'); 
+    detailsLink.onclick = torrentDetailsClicked;
+    details.appendChild(detailsLink);
+    var newText = document.createTextNode("details");
+    detailsLink.appendChild(newText);
+  }
+
+  if ( null != sel )
+  {
+    var selCheck = document.createElement('input');
+    selCheck.setAttribute("type","checkbox");
+    selCheck.setAttribute("name","check");
+    selCheck.setAttribute("value","torrent_name");
+    sel.appendChild(selCheck);
+  }
 }
 
 /*
@@ -394,7 +457,7 @@ function addRowTd(row, field, cssClass)
 
 /*
  * Set the text values of all the TD elements under a TR element for a table 
- * that is meant to contain torrent info.
+ * that is meant to contain torrent or file info. 
  */
 function setRowValues(row, torrentInfo)
 {
@@ -405,7 +468,16 @@ function setRowValues(row, torrentInfo)
     var field = tds[td].getAttribute('field');
     if ( torrentInfo[field] )
     { 
-      setNodeText(tds[td], torrentInfo[field]);
+      // If the user passed a string, set that as the text in the td. 
+      // If an object was passed, assume that it's a DOM node to be added as a child of the td.
+      if ( typeof(torrentInfo[field]) == "string" )
+      {
+        setNodeText(tds[td], torrentInfo[field]);
+      }
+      else
+      {
+        setNodeChild(tds[td], torrentInfo[field]);
+      }
     }
     else if ( field == 'sel' && torrentInfo['name'] )
     {
@@ -463,6 +535,21 @@ function appendToNodeText(td, text)
   }
 }
 
+/*
+ * Set the child of the specified node to be the passed element. Existing children
+ * are removed.
+ */
+function setNodeChild(node, elem)
+{
+  var children = node.childNodes;
+  for( var n = 0; n < node.childNodes.length; n++)
+  {
+    var child = node.childNodes[n];
+    node.removeChild(child);
+  }
+  node.appendChild(elem);
+}
+
 function getNodeAndSetText(id, text)
 {
   node = document.getElementById(id);
@@ -506,10 +593,81 @@ function setTdInputValue(td, value)
 
 
 /*********** PAGE HANDLING  *************/
+
 /* 
  * Functions for determining which page of torrents we are showing, how many pages there are,
  * etc
  */
+
+/**/
+// version 2
+function PageHandler()
+{
+  // The items (torrents, files) to list in pages
+  this.items = null;
+  this.currentPage = 1;
+  this.itemsPerPage = 10;
+  this.onPageChange = null;
+  this.getNumPages = PageHandler_getNumPages;
+  this.updatePagesUi = PageHandler_updatePagesUi;
+  this.getItemsVisibleOnCurrentPage = PageHandler_getItemsVisibleOnCurrentPage;
+  this.nextPage = PageHandler_nextPage;
+  this.prevPage = PageHandler_prevPage;
+}
+
+function PageHandler_getNumPages()
+{
+  if ( null != this.items )
+  {
+    return Math.ceil(this.items.length / this.itemsPerPage);
+  }
+  else
+  {
+    return 1;
+  }
+}
+
+function PageHandler_updatePagesUi()
+{
+  var elem = document.getElementById("page_label");
+  setNodeText(elem, "Page " + this.currentPage + "/" + this.getNumPages()); 
+}
+
+function PageHandler_getItemsVisibleOnCurrentPage()
+{
+  start = (this.currentPage - 1)*this.itemsPerPage;
+  end = start + this.itemsPerPage;
+  return this.items.slice(start, end);
+}
+
+function PageHandler_nextPage()
+{
+  if ( this.currentPage < this.getNumPages() )
+  {
+    this.currentPage++;
+    if ( null != this.onPageChange )
+    {
+      this.onPageChange();
+    }
+  }
+  return false;
+}
+
+function PageHandler_prevPage()
+{
+  if ( this.currentPage > 1 )
+  {
+    this.currentPage--;
+    if ( null != this.onPageChange )
+    {
+      this.onPageChange();
+    }
+  }
+  return false;
+}
+
+/**/
+/*
 var currentTorrentsPage_g = 1;
 var torrentsPerPage_g = 10;
 
@@ -557,6 +715,8 @@ function prevPage()
   }
   return false;
 }
+*/
+/*****/
 
 function updateStatusLine()
 {
@@ -697,3 +857,142 @@ function confirmFilesDelete()
 {
   return confirm('Are you sure you want to delete all the files and the torrent?');
 }
+
+/*********** FILES HANDLING *************/
+
+
+// Current directory to show the contents when showFiles is called.
+var currentFilesDir_g = null;
+// Set of files under the current dir
+var currentFiles_g = null;
+
+
+/*
+ * Delete all the rows in the table and fill it with the contents of the passed
+ * fileinfo array.
+ */
+function refillTable(tableId, files)
+{
+  var table = document.getElementById(tableId);
+  
+  if ( null == table )
+  {
+    alert("updateTable: Can't find the table with id " + tableId);
+    return;
+  }
+ 
+  // Delete all rows
+  var rows = table.getElementsByTagName("tr");
+  while ( rows.length > 1 )
+  {
+    rows[1].parentNode.removeChild(rows[1]);
+  }
+ 
+  for(var i = 0; i < files.length; i++)
+  {
+    var fileInfo = files[i];
+    var newRow = table.insertRow(-1);
+    
+    addRowTds(newRow, filesTableFields, filesTableStyles);
+
+    // Modify the name of the fileInfo object to include an icon representing the 
+    // type of the file
+    var oldName = fileInfo['name'];
+    fileInfo['name'] = makeElementWithIconForFile(fileInfo);
+    setRowValues(newRow, fileInfo);
+    fileInfo['name'] = oldName;
+  }
+
+  setRowStyles(rows);
+}
+
+function makeElementWithIconForFile(fileInfo)
+{
+  var span = document.createElement('span');
+ 
+  var img = document.createElement('img');
+  if ( fileInfo.type == "dir" )
+  {
+    img.src = "icons/orange_folder.png";
+  }
+  else
+  {
+    img.src = "icons/document.png";
+  }
+  img.setAttribute("class", "table_icon");
+  span.appendChild(img);
+
+  var newText = document.createTextNode(fileInfo['name']);
+  if ( fileInfo.type == "dir" )
+  {
+    var link = document.createElement('a');
+    link.href = "#";
+    link.onclick = handleClickedFile;
+    span.appendChild(link);
+    link.appendChild(newText);
+  }
+  else
+  {
+    span.appendChild(newText);
+  }
+
+  return span;
+}
+
+function handleClickedFile(e)
+{
+  if (!e) var e = window.event;
+
+  // this refers to the HTML element which currently handles the event
+  // target/srcElement refer to the HTML element the event originally took place on
+
+  var dirname = e.target.firstChild.data;
+  currentFilesDir_g = currentFilesDir_g + "/" + dirname;
+alert("New dir: " + currentFilesDir_g);
+  getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
+
+  e.cancelBubble = true;
+  if (e.stopPropagation) e.stopPropagation();
+}
+
+function setJavascriptErrorToFirstElem(arr)
+{
+  var para = document.getElementById("javascript_error");
+  setNodeText(para, arr[0])
+  para.setAttribute("class","note");
+}
+
+function updateFiles()
+{
+  pageHandler_g.items = currentFiles_g;
+  files = pageHandler_g.getItemsVisibleOnCurrentPage();
+  pageHandler_g.updatePagesUi();
+  refillTable('file_table', files);
+  updateStatusLine();
+}
+
+function handleRetrievedFiles(files)
+{
+  // Directory is first element
+  currentFilesDir_g = files.shift();
+
+  var dirElem = document.getElementById("files_title");
+  if ( null != dirElem )
+  {
+    setNodeText(dirElem, "Files under " + currentFilesDir_g );
+  }
+
+  currentFiles_g = files;
+  updateFiles();
+}
+
+function showFiles()
+{
+  if ( null == pageHandler_g )
+  {
+    pageHandler_g = new PageHandler();
+    pageHandler_g.onPageChange = updateFiles;
+  }
+  getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
+}
+

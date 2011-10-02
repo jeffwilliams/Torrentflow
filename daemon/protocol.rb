@@ -116,6 +116,14 @@ class DaemonGraphInfoRequest < DaemonRequest
   attr_reader :torrentId
 end
 
+class DaemonListFilesRequest < DaemonRequest
+  def initialize(dir = nil)
+    @dir = dir
+  end
+
+  attr_reader :dir
+end
+
 ####### RESPONSES ########
 class DaemonListTorrentsResponse < DaemonResponse
   def initialize
@@ -202,4 +210,16 @@ class DaemonGraphInfoResponse < DaemonResponse
     @dataPoints = nil
   end
   attr_accessor :dataPoints
+end
+
+class DaemonListFilesResponse < DaemonResponse
+  def initialize
+    super
+    @files = []
+    @dir = nil
+  end
+
+  attr_accessor :files
+  # The directory containing the files
+  attr_accessor :dir
 end
