@@ -8,6 +8,7 @@ class FileInfo
   # Type is one of :file or :dir
   attr_accessor :type
   attr_accessor :size
+  attr_accessor :modified
 
   def self.createFrom(dir, file)
     path = "#{dir}/#{file}"
@@ -22,7 +23,17 @@ class FileInfo
 
     rc.name = file
     rc.size = File.size path
+    rc.modified = File.mtime(path).to_s
+
     rc
+  end
+
+  def to_s
+    s = "File '#{name}'\n"
+    s << "  type: #{type}\n"
+    s << "  size: #{size}\n"
+    s << "  modified: #{modified}\n"
+    s
   end
 end
 

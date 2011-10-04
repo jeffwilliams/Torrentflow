@@ -220,7 +220,7 @@ form
 
 .modifiedcol
 {
-  width: 9em;
+  width: 20em;
 }
 
 #overlay
@@ -283,4 +283,9 @@ form
 .table_icon
 {
   margin-right: 0.250em;
+}
+
+a
+{
+  color: #000000;
 }

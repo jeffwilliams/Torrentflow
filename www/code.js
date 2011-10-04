@@ -616,6 +616,7 @@ function PageHandler()
   this.getItemsVisibleOnCurrentPage = PageHandler_getItemsVisibleOnCurrentPage;
   this.nextPage = PageHandler_nextPage;
   this.prevPage = PageHandler_prevPage;
+  this.setPage = PageHandler_setPage;
 }
 
 function PageHandler_getNumPages()
@@ -669,57 +670,15 @@ function PageHandler_prevPage()
   return false;
 }
 
-/**/
-/*
-var currentTorrentsPage_g = 1;
-var torrentsPerPage_g = 10;
-
-function getNumPages()
+function PageHandler_setPage(num)
 {
-  if ( null != ajaxRetrievedTorrents_g )
+  if ( num >= 1 && num <= this.getNumPages() )
   {
-    return Math.ceil(ajaxRetrievedTorrents_g.length / torrentsPerPage_g);
-  }
-  else
-  {
-    return 1;
-  }
-}
-
-function updatePagesUi()
-{
-  var elem = document.getElementById("page_label");
-  setNodeText(elem, "Page " + currentTorrentsPage_g + "/" + getNumPages()); 
-}
-
-function getTorrentsVisibleOnPageCurrentPage(torrentArray)
-{
-  start = (currentTorrentsPage_g - 1)*torrentsPerPage_g;
-  end = start + torrentsPerPage_g;
-  return torrentArray.slice(start, end);
-}
-
-function nextPage()
-{
-  if ( currentTorrentsPage_g < getNumPages() )
-  {
-    currentTorrentsPage_g++;
-    updateTorrents(false);   
+    this.currentPage = num;
   }
   return false;
 }
 
-function prevPage()
-{
-  if ( currentTorrentsPage_g > 1 )
-  {
-    currentTorrentsPage_g--;
-    updateTorrents(false);   
-  }
-  return false;
-}
-*/
-/*****/
 
 function updateStatusLine()
 {
@@ -951,7 +910,6 @@ function handleClickedFile(e)
 
   var dirname = e.target.firstChild.data;
   currentFilesDir_g = currentFilesDir_g + "/" + dirname;
-alert("New dir: " + currentFilesDir_g);
   getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
 
   e.cancelBubble = true;
@@ -985,6 +943,7 @@ function handleRetrievedFiles(files)
     setNodeText(dirElem, "Files under " + currentFilesDir_g );
   }
 
+  pageHandler_g.setPage(1);
   currentFiles_g = files;
   updateFiles();
 }

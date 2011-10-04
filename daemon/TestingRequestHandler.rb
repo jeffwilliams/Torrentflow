@@ -193,9 +193,11 @@ class TestingRequestHandler < RequestHandler
   def handleListFilesRequest(req)
     resp = DaemonListFilesResponse.new
     resp.dir = "."
-    Dir.new(".").each{ |file|
+    resp.dir = Pathname.new(req.dir).realpath.to_s if req.dir
+    
+    Dir.new(resp.dir).each{ |file|
       if file != '.'
-        info = FileInfo.createFrom(".", file)
+        info = FileInfo.createFrom(resp.dir, file)
         info.size = Formatter.formatSize(info.size)
         resp.files.push info
       end

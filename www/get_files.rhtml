@@ -33,7 +33,7 @@
     if dirContents
       # Send the array of TorrentInfo objects as JSON
       encoded = dirContents.files.collect{ |f|
-        {'name' => f.name, 'type' => f.type.to_s, 'size' => f.size}
+        {'name' => f.name, 'type' => f.type.to_s, 'size' => f.size, 'modified' => f.modified}
       }
       rc = ["success", dirContents.dir]
       #rc.concat encoded
