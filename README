@@ -71,6 +71,40 @@ INSTALLATION:
 
   But replace TORRENTFLOW_HOME with the real home. 
 
+  If you want to run multiple separate instances of torrentflow, you must configure the RubyAddPath directives separately
+  for the two instances, for example by putting them in Directory containers like so:
+
+    <IfModule mod_ruby.c>
+      # for Apache::ERubyRun
+      RubyRequire apache/eruby-run
+ 
+      RubyAddPath TORRENTFLOW_HOME/daemon
+      RubyAddPath TORRENTFLOW_HOME/www-lib
+   
+      # handle *.rhtml as eruby files.
+      <Files *.rhtml>
+        SetHandler ruby-object
+        RubyHandler Apache::ERubyRun.instance
+      </Files>
+      
+      AddType text/html .rhtml
+    </IfModule>
+
+    <Directory /var/www/torrentflow1>
+      <IfModule mod_ruby.c>
+        RubyAddPath /home/kanobe/src/torrentflow1/daemon
+        RubyAddPath /home/kanobe/src/torrentflow1/www-lib
+      </IfModule>
+    </Directory>
+
+    <Directory /var/www/torrentflow2>
+      <IfModule mod_ruby.c>
+        RubyAddPath /home/kanobe/src/torrentflow2/daemon
+        RubyAddPath /home/kanobe/src/torrentflow2/www-lib
+      </IfModule>
+    </Directory>
+
+
 3. In /etc/apache2/mods-available/dir.conf, add index.rhtml to the DirectoryIndex variable
 
 4. Make a symbolic link from the web-accessible directory under the apache root where 
@@ -83,7 +117,8 @@ INSTALLATION:
       ln -s TORRENTFLOW_HOME/www torrentflow 
 
 5. Edit the configuration file torrentflowdeamon.conf and set appropriate settings for the 
-   parameters.
+   parameters. If you are running multiple instances, make sure each uses a different TCP 
+   port number.
 
 RUNNING
 -------
