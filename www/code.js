@@ -735,6 +735,12 @@ function torrentDetailsClicked(e)
   return false;
 }
 
+function localEncodeURI(uri)
+{
+  uri = uri.replace('+','%2B'); // encodeURIComponent on firefox doesn't handle + properly
+  return encodeURIComponent(uri);
+}
+
 function showOverlay(torrentInfo)
 {
   var overlay = document.getElementById("overlay");
@@ -762,8 +768,7 @@ function showOverlay(torrentInfo)
   getNodeAndSetText('overlay_max_uploads_col', torrentInfo['max_uploads']);
 
   // Generate the graph
-  var name = torrentInfo['name'].replace('+','%2B'); // encodeURIComponent on firefox doesn't handle + properly
-  var url = "get_torrentgraphdata.rhtml?name=" + encodeURIComponent(name);
+  var url = "get_torrentgraphdata.rhtml?name=" + localEncodeURI(name);
   var elem = document.getElementById("graphdiv");
   try{
   g = new Dygraph(
@@ -895,7 +900,10 @@ function makeElementWithIconForFile(fileInfo)
   }
   else
   {
-    span.appendChild(newText);
+    var link = document.createElement('a');
+    link.href = "download_file.rhtml?path=" + localEncodeURI(currentFilesDir_g +"/"+ fileInfo['name'])
+    span.appendChild(link);
+    link.appendChild(newText);
   }
 
   return span;

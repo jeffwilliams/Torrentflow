@@ -9,8 +9,6 @@ class TcpStreamHandler
     # Send length as two 32 bit unsigned integers, high-order word first.
     length = length.abs
     packed = [length / 0x10000, length % 0x10000].pack("NN") # N == Long, network (big-endian) byte order
-puts "Send: Should send length #{length}"
-puts "Send: Send raw length words of length #{packed.length}"
     @socket.print packed
     copyStream(io, @socket) if io
   end

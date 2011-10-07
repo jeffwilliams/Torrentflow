@@ -137,8 +137,8 @@ terminateRequestHandler = Proc.new{
 }
 
 begin
-  #requestHandler = RasterbarLibtorrentRequestHandler.new(terminateRequestHandler)
-  requestHandler = TestingRequestHandler.new(terminateRequestHandler)
+  requestHandler = RasterbarLibtorrentRequestHandler.new(terminateRequestHandler)
+  #requestHandler = TestingRequestHandler.new(terminateRequestHandler)
   genericServer.start( 
     Proc.new{ |clientSock, addr, port|
       #requestHandler = TestingRequestHandler.new(terminateRequestHandler)

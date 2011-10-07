@@ -620,7 +620,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       end
       absRequestedDir = Pathname.new(req.dir).realpath.to_s
       # Don't allow listing of directories above datadir
-      absRequestedDir = absDataDir if ! absRequestedDir =~ /^#{absDataDir}/
+      absRequestedDir = absDataDir if absRequestedDir !~ /^#{absDataDir}/
     end
 
     resp.dir = absRequestedDir
@@ -631,6 +631,17 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         resp.files.push info
       end
     }
+
+    if absRequestedDir == absDataDir
+      resp.files.collect!{ |f|
+        if f.name != ".."
+          f
+        else
+          nil
+        end
+      }
+      resp.files.compact!
+    end
   
     # Sort the files so that directories are at the top, then files, and both are
     # sorted alphabetically.
@@ -646,6 +657,30 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     }  
 
     resp
+  end
+
+  # This method sends the file as a stream using the TcpStreamHandler 
+  # on success. On error, a 0-length stream is sent.
+  def handleDownloadFileRequest(req)
+    begin
+      # Make sure we don't download files outside of the data dir
+      absDataDir = Pathname.new($config.dataDir).realpath.to_s
+      absRequestedFile = Pathname.new(req.path).realpath.to_s
+      if absRequestedFile !~ /^#{absDataDir}/
+        return StreamMessage.new(0, nil)
+      end
+
+      length = File.size(req.path)
+      # There is a possible race condition here. If we get the file size, and then
+      # start sending bytes, and a writer is still writing to the end of the file
+      # we will write too few bytes. As well if the file shrinks, we won't write enough
+      # bytes and the reader will wait forever. Could solve this using a marker at the
+      # end of the stream instead of prefixing with the length.
+      io = File.open(req.path, "r")
+      StreamMessage.new(length, io)
+    rescue
+      StreamMessage.new(0, nil)
+    end
   end
 
   private
