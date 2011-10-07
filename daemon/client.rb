@@ -13,7 +13,8 @@ commands =
   "alerts" => "Get the latest alerts. If a second parameter is specified, only alerts for that torrent name are returned",
   "fsinfo" => "Get fsinfo",
   "graphdata" => "Get graph data for the named torrent",
-  "listfiles" => "Get a list of files under the data dir. If an argument is passed, gets the files under that directory"
+  "listfiles" => "Get a list of files under the data dir. If an argument is passed, gets the files under that directory",
+  "download" => "Download a file from under the data dir to /tmp. Full path is expected."
 }
 
 if ARGV.size <= 0 || !commands.has_key?(ARGV[0])
@@ -178,5 +179,26 @@ elsif ARGV[0] == "listfiles"
     puts "Operation failed: #{$!}"
     puts $!.backtrace.join("\n")
   end
+elsif ARGV[0] == "download"
+  if ARGV.size < 2
+    puts "The download command expects the path of a file."
+    exit 1
+  end
+  
+  path = ARGV[1]
+  begin
+    dest = "/tmp/" + File.basename(path)
+    File.open(dest,"w"){ |io|
+      if client.downloadFile(path, io)
+        puts "Downloaded #{dest}"
+      else
+        puts "Downloading #{dest} failed!"
+      end
+    }
+  rescue
+    puts "Operation failed: #{$!}"
+    puts $!.backtrace.join("\n")
+  end
+
 end
 

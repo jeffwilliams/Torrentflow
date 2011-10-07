@@ -124,6 +124,17 @@ class DaemonListFilesRequest < DaemonRequest
   attr_reader :dir
 end
 
+# The response to this request is not a DaemonResponse, but
+# instead a length and a stream of bytes, that can be handled
+# using TcpStreamHandler
+class DaemonDownloadFileRequest < DaemonRequest
+  def initialize(path)
+    @path = path
+  end
+
+  attr_reader :path
+end
+
 ####### RESPONSES ########
 class DaemonListTorrentsResponse < DaemonResponse
   def initialize

@@ -4,6 +4,7 @@ require 'GenericTcpMessageHandler'
 require 'protocol'
 require 'DataPoint'
 require 'FileInfo'
+require 'TcpStreamHandler'
 
 class DaemonClient
   def initialize(addr, port, readTimeout = nil)
@@ -163,6 +164,24 @@ class DaemonClient
     }
   end
 
+  # Download a file from the daemon's data directory. This method
+  # expects an IO object that is used as the destination of the file.
+  def downloadFile(path, destinationIO)
+    req = DaemonDownloadFileRequest.new(path)
+
+    rc = true
+    @genericHandler.send req
+    resp = @streamHandler.recv(destinationIO)
+    if ! resp
+      # Connection Failure! re-connect
+      connect(@addr, @port)
+      rc = false
+    else
+      rc = true
+    end
+    rc
+  end
+
   private
   def connect(addr, port)
     if @clientSock
@@ -170,6 +189,7 @@ class DaemonClient
     end
     @clientSock = GenericTcpClient.new(addr, port, false).connect
     @genericHandler = GenericTcpMessageHandler.new(@clientSock)
+    @streamHandler = TcpStreamHandler.new(@clientSock)
   end
 
   # Calls the attached block with the response if a response is successfully received. 

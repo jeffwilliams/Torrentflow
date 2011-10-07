@@ -11,6 +11,17 @@ require 'DataPoint'
 require 'SyslogWrapper'
 require 'pathname'
 require 'FileInfo'
+require 'TcpStreamHandler'
+
+class StreamMessage
+  def initialize(len, io)
+    @io = io
+    @len = len
+  end
+
+  attr_accessor :io
+  attr_accessor :len
+end
 
 # This class is used to manage a single client socket. It waits for requests and 
 # sends back responses.
@@ -24,6 +35,7 @@ class RequestHandler
   
   def manage(sock, addr, port)
     genericHandler = GenericTcpMessageHandler.new(sock)
+    streamHandler = TcpStreamHandler.new(sock)
     while ! @done  
       req = genericHandler.recv
       if ! req
@@ -32,7 +44,12 @@ class RequestHandler
       end
       resp = handle(req)
       if resp
-        genericHandler.send resp
+        if resp.is_a? StreamMessage
+          streamHandler.send resp.len, resp.io
+          resp.io.close if resp.io && ! resp.io.closed?
+        else
+          genericHandler.send resp
+        end
       end
     end
   
@@ -69,6 +86,8 @@ class RequestHandler
       handleGraphInfoRequest req
     elsif req.is_a? DaemonListFilesRequest
       handleListFilesRequest req
+    elsif req.is_a? DaemonDownloadFileRequest
+      handleDownloadFileRequest req
     else
       SyslogWrapper.instance.info "Got an unknown request type #{req.class}"
       nil

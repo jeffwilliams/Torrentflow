@@ -218,6 +218,23 @@ class TestingRequestHandler < RequestHandler
   
     resp
   end
+
+  # This method sends the file as a stream using the TcpStreamHandler 
+  # on success. On error, a 0-length stream is sent.
+  def handleDownloadFileRequest(req)
+    begin
+      length = File.size(req.path)
+      # There is a possible race condition here. If we get the file size, and then
+      # start sending bytes, and a writer is still writing to the end of the file
+      # we will write too few bytes. As well if the file shrinks, we won't write enough
+      # bytes and the reader will wait forever. Could solve this using a marker at the
+      # end of the stream instead of prefixing with the length.
+      io = File.open(req.path, "r")
+      StreamMessage.new(length, io)
+    rescue
+      StreamMessage.new(0, nil)
+    end
+  end
 end
 
 
