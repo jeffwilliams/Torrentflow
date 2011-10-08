@@ -176,18 +176,10 @@
           <div id="title">
             Torrentflow
           </div>
-          <p>
-            <table id="statustable">
-              <tr>
-                <td id="torrent_status">
-                  0 active torrents, 0 failed, 0 complete 
-                </td>
-                <td id="disk_status">
-                  []
-                </td>
-              </tr>
-            </table>
-          </p>
+          <div id="statusdiv">
+            <div id="torrent_status">0 active torrents, 0 failed, 0 complete</div>
+            <div id="disk_status">[]</div>
+          </div>
           <p id="javascript_error" class="collapsed">
           </p>
           <%
@@ -205,39 +197,46 @@
             end
           %>
           <div class="inputs">
-            <!--<h2>Add Torrents</h2>-->
-            <table>
-            <tr>
-              <td>
-                <form method="post" enctype="multipart/form-data" action="index.rhtml">
-                  Torrent URL: </td><td><input type="text" name="torrenturl" /> <input type="submit" value="Get file" />
-                  <input type="hidden" name="action" value="download_torrent"/>
-                </form>
-              </td>
-            </tr>
-            <tr>
-              
-              <td>
-                <form method="post" enctype="multipart/form-data" action="index.rhtml">
-                  Torrent upload: </td><td> <input type="file" name="torrentfile" value="browse..." /> <input type="submit" value="Upload" />
-                  <input type="hidden" name="action" value="upload_torrent"/>
-                </form>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <input type="submit" name="action" value="view files" onclick="window.location = 'files.rhtml';"/>
-              </td>
-              <td>
-                <form method="post" action="index.rhtml">
-                  <input type="hidden" name="action" value="logout"/>
-                  <input type="submit" name="action" value="logout"/>
-                </form>
-              </td>
-            </tr>
-            </table>
+            <div style="float: left;">
+              <table>
+                <tr>
+                  <td>Torrent URL:</td>
+                  <td>
+                    <form method="post" enctype="multipart/form-data" action="index.rhtml">
+                      <input type="text" name="torrenturl" /> <input type="submit" value="Get file" />
+                      <input type="hidden" name="action" value="download_torrent"/>
+                    </form>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Torrent upload:</td>
+                  <td> 
+                    <form method="post" enctype="multipart/form-data" action="index.rhtml">
+                      <input type="file" name="torrentfile" value="browse..." /> <input type="submit" value="Upload" />
+                      <input type="hidden" name="action" value="upload_torrent"/>
+                    </form>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <div style="float: right;">
+              <table style="text-align: right;">
+                <tr>
+                  <td>
+                    <input type="submit" name="action" value="view files" onclick="window.location = 'files.rhtml';"/>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <form method="post" action="index.rhtml">
+                      <input type="hidden" name="action" value="logout"/>
+                      <input type="submit" name="action" value="logout"/>
+                    </form>
+                  </td>
+                </tr>
+              </table>
+            </div>
           </div>
-
 
           <div class="torrenttabletitle">
             <span>Torrents</span><br>

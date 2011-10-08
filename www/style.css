@@ -53,13 +53,19 @@ p
   width: 100%;
 }
 
-#statustable
+#statusdiv
 {
-  width: 100%;
+  height: 1.5em;
+  padding: 1em;
+}
+
+#torrent_status
+{
+  float: left;
 }
 #disk_status
 {
-  text-align: right;
+  float: right;
 }
 
 tr
@@ -101,6 +107,7 @@ input[type="file"]
   background-color: #cc6633;
   padding: 1em;
   border-bottom: 0.0625em solid #000000;
+  height: 3em;
 }
 
 h2

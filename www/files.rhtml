@@ -175,18 +175,10 @@
           <div id="title">
             Torrentflow
           </div>
-          <p>
-            <table id="statustable">
-              <tr>
-                <td id="torrent_status">
-                  0 active torrents, 0 failed, 0 complete 
-                </td>
-                <td id="disk_status">
-                  []
-                </td>
-              </tr>
-            </table>
-          </p>
+          <div id="statusdiv">
+            <div id="torrent_status">0 active torrents, 0 failed, 0 complete</div>
+            <div id="disk_status">[]</div>
+          </div>
           <p id="javascript_error" class="collapsed">
           </p>
           <%
@@ -204,14 +196,23 @@
             end
           %>
           <div class="inputs">
-            <!--<h2>Add Torrents</h2>-->
-            <table>
-            <tr>
-              <td>
-                <input type="submit" name="action" value="view torrents" onclick="window.location = 'index.rhtml';"/>
-              </td>
-            </tr>
-            </table>
+            <div style="float: right;">
+              <table style="text-align: right;">
+                <tr>
+                  <td>
+                    <input type="submit" name="action" value="view torrents" onclick="window.location = 'index.rhtml';"/>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <form method="post" action="index.rhtml">
+                      <input type="hidden" name="action" value="logout"/>
+                      <input type="submit" name="action" value="logout"/>
+                    </form>
+                  </td>
+                </tr>
+              </table>
+            </div>
           </div>
           <div class="torrenttabletitle">
             <span id="files_title">Files</span><br>
