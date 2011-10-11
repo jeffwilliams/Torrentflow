@@ -699,7 +699,7 @@ function updateStatusLine()
     }
   }
   var elem = document.getElementById("torrent_status");
-  setNodeText(elem, active + " active torrents, " + error + " failed, " + complete + " complete"); 
+  setNodeText(elem, active + " active torrents, " + complete + " complete"); 
   
   getFsInfo(appendFsInfoToStatusLine, setFsInfoErrorToStatusLine);
 }
