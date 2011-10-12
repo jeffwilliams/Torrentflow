@@ -99,9 +99,7 @@ function getTorrentsUsingAjax()
         
       },
       onFailure: function(){
-        var para = document.getElementById("javascript_error");
-        setNodeText(para, "Ajax error!")
-        para.setAttribute("class","note");
+        setJavascriptError("Ajax error!")
         ajaxRetrievedTorrents_g = []
         updateTorrents(false);
       }
@@ -128,7 +126,6 @@ function getDetailedTorrentInfo(torrentName, callback)
       method: 'get',
       parameters: params,
       onSuccess: function(transport){
-        var para = document.getElementById("javascript_error");
         // Parse the JSON response 
         resp = transport.responseText.evalJSON();
         successful = resp.shift();
@@ -140,6 +137,7 @@ function getDetailedTorrentInfo(torrentName, callback)
         
       },
       onFailure: function(){
+        setJavascriptError("Ajax error!")
       }
     }
   );
@@ -220,7 +218,6 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
       method: 'get',
       parameters: params,
       onSuccess: function(transport){
-        var para = document.getElementById("javascript_error");
         // Parse the JSON response 
         resp = transport.responseText.evalJSON();
         successful = resp.shift();
@@ -236,6 +233,7 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
         
       },
       onFailure: function(){
+        setJavascriptError("Ajax error!")
       }
     }
   );
@@ -880,7 +878,7 @@ function makeElementWithIconForFile(fileInfo)
   var img = document.createElement('img');
   if ( fileInfo.type == "dir" )
   {
-    img.src = "icons/orange_folder.png";
+    img.src = "icons/folder.png";
   }
   else
   {
@@ -924,11 +922,16 @@ function handleClickedFile(e)
   if (e.stopPropagation) e.stopPropagation();
 }
 
-function setJavascriptErrorToFirstElem(arr)
+function setJavascriptError(val)
 {
   var para = document.getElementById("javascript_error");
-  setNodeText(para, arr[0])
+  setNodeText(para, val);
   para.setAttribute("class","note");
+}
+
+function setJavascriptErrorToFirstElem(arr)
+{
+  setJavascriptError(arr[0]);
 }
 
 function updateFiles()
