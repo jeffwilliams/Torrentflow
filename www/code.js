@@ -245,7 +245,27 @@ function torrentSort(t1,t2)
   ts1 = torrentStateToSortingNum(t1['state']);
   ts2 = torrentStateToSortingNum(t2['state']);
   
-  return ts1 - ts2;
+  rc = ts1 - ts2;
+  if ( rc == 0 )
+  {
+    n1 = t1['name'];
+    n2 = t2['name'];
+
+    if ( n1 < n2 )
+    {
+      rc = -1;
+    }
+    else if ( n1 > n2 )
+    {
+      rc = 1;
+    }
+    else
+    {
+      rc = 0;
+    }
+  }
+
+  return rc;
 }
 
 function torrentStateToSortingNum(state)
@@ -607,7 +627,7 @@ function PageHandler()
   // The items (torrents, files) to list in pages
   this.items = null;
   this.currentPage = 1;
-  this.itemsPerPage = 10;
+  this.itemsPerPage = 20;
   this.onPageChange = null;
   this.getNumPages = PageHandler_getNumPages;
   this.updatePagesUi = PageHandler_updatePagesUi;
