@@ -185,6 +185,17 @@ form
   margin: 0;
 }
 
+.namecol
+{
+  /* This max-width value is much too small, but is a hack to make 
+     the browser allow the overflow to hide. It seems to still make the first column
+     of the table take as much space as necessary while allowing the hiding. 
+     Except in IE. */
+  max-width: 9em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .sizecol
 {
   width: 9em;

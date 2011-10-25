@@ -12,10 +12,10 @@ var ajaxRetrievedTorrents_g = null
 var pageHandler_g = null;
 
 var torrentTableFields = ['name', 'total_size', 'state', 'rates', 'progress', 'estimated_time', 'details', 'sel'];
-var torrentTableStyles = ['', 'sizecol', 'statuscol', 'ratescol', 'progresscol', 'timecol', 'detailscol', 'selcol'];
+var torrentTableStyles = ['namecol', 'sizecol', 'statuscol', 'ratescol', 'progresscol', 'timecol', 'detailscol', 'selcol'];
 
 var filesTableFields = ['name', 'modified', 'size', 'sel'];
-var filesTableStyles = ['', 'modifiedcol', 'sizecol', 'selcol'];
+var filesTableStyles = ['namecol', 'modifiedcol', 'sizecol', 'selcol'];
 
 /*
  * This function should get the up-to-date torrent information. It will probably
