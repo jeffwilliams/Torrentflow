@@ -166,12 +166,17 @@ class DaemonClient
 
   # Download a file from the daemon's data directory. This method
   # expects an IO object that is used as the destination of the file.
+  # If a block is passed, the expected length of data is passed to the block.
   def downloadFile(path, destinationIO)
     req = DaemonDownloadFileRequest.new(path)
 
     rc = true
     @genericHandler.send req
-    resp = @streamHandler.recv(destinationIO)
+    resp = @streamHandler.recv(destinationIO){ |length|
+      if block_given?
+        yield length
+      end
+    }
     if ! resp
       # Connection Failure! re-connect
       connect(@addr, @port)

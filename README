@@ -68,6 +68,11 @@ INSTALLATION:
       
       AddType text/html .rhtml
     </IfModule>
+    <Directory TORRENTFLOW_WWW_DIR>
+      <IfModule mod_ruby.c>
+        Options ExecCGI
+      </IfModule>
+    </Directory>
 
   But replace TORRENTFLOW_HOME with the real home. 
 
@@ -77,21 +82,27 @@ INSTALLATION:
     <IfModule mod_ruby.c>
       # for Apache::ERubyRun
       RubyRequire apache/eruby-run
+      # for Apache::RubyRun
+      RubyRequire apache/ruby-run
  
-      RubyAddPath TORRENTFLOW_HOME/daemon
-      RubyAddPath TORRENTFLOW_HOME/www-lib
-   
       # handle *.rhtml as eruby files.
       <Files *.rhtml>
         SetHandler ruby-object
         RubyHandler Apache::ERubyRun.instance
       </Files>
       
+      # handle *.rb files as ruby CGI scripts (modruby)
+      <Files *.rb>
+        SetHandler ruby-object
+        RubyHandler Apache::RubyRun.instance
+      </Files>
+
       AddType text/html .rhtml
     </IfModule>
 
     <Directory /var/www/torrentflow1>
       <IfModule mod_ruby.c>
+        Options ExecCGI
         RubyAddPath /home/kanobe/src/torrentflow1/daemon
         RubyAddPath /home/kanobe/src/torrentflow1/www-lib
       </IfModule>
@@ -99,6 +110,7 @@ INSTALLATION:
 
     <Directory /var/www/torrentflow2>
       <IfModule mod_ruby.c>
+        Options ExecCGI
         RubyAddPath /home/kanobe/src/torrentflow2/daemon
         RubyAddPath /home/kanobe/src/torrentflow2/www-lib
       </IfModule>

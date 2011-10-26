@@ -1029,7 +1029,7 @@ function makeElementWithIconForFile(fileInfo)
   else
   {
     var link = document.createElement('a');
-    link.href = "download_file.rhtml?path=" + localEncodeURI(currentFilesDir_g +"/"+ fileInfo['name'])
+    link.href = "download_file.rb?path=" + localEncodeURI(currentFilesDir_g +"/"+ fileInfo['name'])
     span.appendChild(link);
     link.appendChild(newText);
   }

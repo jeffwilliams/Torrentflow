@@ -15,6 +15,7 @@ class TcpStreamHandler
 
   # Receive a stream of bytes and write it to the passed io
   # Returns the number of bytes written on success, or nil if there was a connection error
+  # If a block is passed, the expected size of the data to be read is passed to the block.
   def recv(io)
     binLen = nil
     begin
@@ -24,6 +25,10 @@ class TcpStreamHandler
     return nil if ! binLen
     lengthArray = binLen.unpack("NN")
     length = lengthArray[0] * 0x10000 + lengthArray[1]
+
+    if block_given?
+      yield length
+    end
 
     begin
       copyStream(@socket,io,length)
