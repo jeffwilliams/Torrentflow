@@ -239,6 +239,73 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
   );
 }
 
+function modifyTorrentsUsingAjax(torrentNameList, operation)
+{
+
+  params = {};
+  params["operation"] = operation;
+  for(var i = 0; i < torrentNameList.length; i++)
+  {
+    params["check" + torrentNameList[i]] = torrentNameList[i];
+  }
+
+  new Ajax.Request('modify_torrent.rhtml',
+    {
+      method: 'get',
+      parameters: params,
+      onSuccess: function(transport){
+        var para = document.getElementById("javascript_error");
+        // Parse the JSON response 
+        resp = transport.responseText.evalJSON();
+        successful = resp.shift();
+
+        if (successful == "success")
+        {
+          ajaxRetrievedTorrents_g = resp;
+          ajaxRetrievedTorrents_g.sort(torrentSort);
+          // Clear any error messages
+          clearTdText(para);
+          para.setAttribute("class","collapsed");
+        }
+        else
+        {
+          setNodeText(para, "Error: " + successful);
+          para.setAttribute("class","note");
+          ajaxRetrievedTorrents_g = []
+        }
+        updateTorrents(false);
+        
+      },
+      onFailure: function(){
+        setJavascriptError("Ajax error!")
+        ajaxRetrievedTorrents_g = []
+        updateTorrents(false);
+      }
+    }
+  );
+}
+
+function removeSelectedTorrents(tableId)
+{
+  names = getSelectedNamesInTable(tableId);
+  modifyTorrentsUsingAjax(names, "remove_torrent");
+}
+
+function pauseSelectedTorrents(tableId)
+{
+  names = getSelectedNamesInTable(tableId);
+  modifyTorrentsUsingAjax(names, "pause");
+}
+
+function removeSelectedTorrentsFiles(tableId)
+{
+  if ( confirmFilesDelete() )
+  {
+    names = getSelectedNamesInTable(tableId);
+    modifyTorrentsUsingAjax(names, "remove_files");
+  }
+}
+
 
 function torrentSort(t1,t2)
 {
@@ -612,6 +679,48 @@ function setTdInputValue(td, value)
   }
 }
 
+/**
+  This function gets the names of the selected items in the talbe with the passed id.
+  An item is selected if the row has a td with the input checkbox selected. The names
+  returned are actually the 'value' field of the checkbox.
+*/
+function getSelectedNamesInTable(tableId)
+{
+  var rc = [];
+
+  var table = document.getElementById(tableId);
+  
+  if ( null == table )
+  {
+    alert("updateTable: Can't find the table with id " + tableId);
+    return;
+  }
+
+  var rows = table.getElementsByTagName("tr");
+  for(var rowNum = 1; rowNum < rows.length; rowNum++)
+  {
+    var tds = rows[rowNum].getElementsByTagName("td"); 
+  
+    for(var tdNum = 0; tdNum < tds.length; tdNum++)
+    {
+      // the field attribute on the selector td is 'sel'
+      td = tds[tdNum];
+      if ( td.getAttribute('field') == 'sel' )
+      {
+        for( var n = 0; n < td.childNodes.length; n++)
+        {
+          var child = td.childNodes[n];
+          if ( child.checked )
+          {
+            rc.push(child.getAttribute("value"));
+          }
+        }
+      }
+    }
+  }
+
+  return rc;
+}
 
 /*********** PAGE HANDLING  *************/
 
@@ -697,6 +806,7 @@ function PageHandler_setPage(num)
   return false;
 }
 
+/*********** END PAGE HANDLING  *************/
 
 function updateStatusLine()
 {

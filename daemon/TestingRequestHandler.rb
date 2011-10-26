@@ -45,6 +45,8 @@ class TestingRequestHandler < RequestHandler
           info.values[:download_rate] = i[:download_rate]
         elsif :upload_rate == d
           info.values[:upload_rate] = i[:upload_rate]
+        elsif :paused == d
+          info.values[:paused] = (i[:paused]) ? "paused" : "running"
         end
       }
 
@@ -83,6 +85,16 @@ class TestingRequestHandler < RequestHandler
       end
     }
     $testingTorrentList.torrents.compact!
+    resp
+  end
+
+  def handlePauseRequest(req)
+    resp = DaemonPauseTorrentResponse.new
+    $testingTorrentList.torrents.each{ |c|
+      if c[:name] == req.torrentName
+        c[:paused] = ! c[:paused]
+      end
+    }
     resp
   end
 

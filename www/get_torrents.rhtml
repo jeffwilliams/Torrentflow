@@ -34,8 +34,6 @@
     #action = Apache.request.paramtable['action'].to_s
 
   errorMessage = nil
-  #x = JSON.generate({"a" => 5})
-  #puts x
   client = createDaemonClient{ |err|
     errorMessage = err
   }

@@ -24,6 +24,14 @@
   }
 
   if client
+    if ! sessionIsValid?(client, Apache.request)
+      client.close
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if client
     torrents = client.getAlerts(torrentNameFilter)
     if torrents 
       # Send the array of TorrentInfo objects as JSON

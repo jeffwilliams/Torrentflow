@@ -74,9 +74,6 @@
           errorMessage = "The form submission didn't include the variable torrenturl"
         end
       end
-    elsif action == "modify_torrents"
-      rc = handleModificationRequest(Apache.request)
-      errorMessage = rc if rc.length > 0
     elsif action == "login"
       if client
         if handleLoginRequest(client, Apache.request)
@@ -243,7 +240,7 @@
           </div>
           <form method="post" action="index.rhtml">
             <div class="torrenttablebuttons">
-                <input type="submit" name="pause" value="Pause"> <input type="submit" name="remove_torrent" value="Remove Torrent"> <input type="submit" name="remove_files" onclick="return confirmFilesDelete()" value="Remove Files">
+                <button onclick="pauseSelectedTorrents('torrents_table_inprogress'); return false">Pause</button> <button onclick="removeSelectedTorrents('torrents_table_inprogress'); return false">Remove Torrent</button> <button onclick="removeSelectedTorrentsFiles('torrents_table_inprogress'); return false">Remove Files</button>
             </div>
             <div class="fullwidth">
                 <input type="hidden" name="action" value="modify_torrents"/>
