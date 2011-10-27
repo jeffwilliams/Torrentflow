@@ -53,7 +53,7 @@ else
       print cgi.header(
         "status" => "OK",
         "type" => mimeType,
-        "Content-Disposition" => "inline; filename=#{File.basename(path)}",
+        "Content-Disposition" => "inline; filename=\"#{File.basename(path)}\"",
         "length" => length
       )
     }
