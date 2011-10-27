@@ -44,9 +44,11 @@ else
 
   if client
     # Download file
+
     mimeType = Mime.instance.getMimeTypeOfFilename(File.basename(path))
     mimeType = "application/octet-stream" if ! mimeType
-    
+ 
+    request.sync = true   
     rc = client.downloadFile(path, $stdout){ |length|
       print cgi.header(
         "status" => "OK",
