@@ -1,5 +1,6 @@
 require 'SyslogWrapper'
 require 'DataPoint'
+require 'fileutils'
 
 class TestingRequestHandler < RequestHandler
 
@@ -246,6 +247,18 @@ class TestingRequestHandler < RequestHandler
     rescue
       StreamMessage.new(0, nil)
     end
+  end
+
+  def handleDelFileRequest(req)
+    resp = DaemonListFilesResponse.new
+    # Make sure we don't download files outside of the data dir
+      begin
+        FileUtils.rm_r req.path
+      rescue
+        resp.successful = false
+        resp.errorMsg = $!.to_s
+      end
+    resp
   end
 end
 

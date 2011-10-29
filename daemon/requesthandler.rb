@@ -694,7 +694,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     # Make sure we don't download files outside of the data dir
     if pathIsUnderDataDir req.path
       begin
-        File.unlink req.path
+        FileUtils.rm_r req.path
       rescue
         resp.successful = false
         resp.errorMsg = $!.to_s
