@@ -176,7 +176,7 @@
             Torrentflow
           </div>
           <div id="statusdiv">
-            <div id="torrent_status">0 active torrents, 0 failed, 0 complete</div>
+            <div id="torrent_status">0 active torrents, 0 complete</div>
             <div id="disk_status">[]</div>
           </div>
           <p id="javascript_error" class="collapsed">
@@ -217,9 +217,8 @@
           <div class="torrenttabletitle">
             <span id="files_title">Files</span><br>
           </div>
-          <form method="post" action="index.rhtml">
             <div class="torrenttablebuttons">
-                <input type="submit" name="delete_file" value="Delete"> 
+                <button onclick="removeSelectedDatadirFiles('file_table')">Delete</button> 
             </div>
             <div class="fullwidth">
                 <input type="hidden" name="action" value="modify_torrents"/>
@@ -237,7 +236,6 @@
                   </tbody>
                 </table>
             </div>
-          </form>
             <div class="torrenttablebuttons">
               <p>
               <span id="page_label">Page 1/1</span> <button onclick="pageHandler_g.prevPage(); return false" id="prev_page" class="buttonlinkenabled">prev</button> <button onclick="pageHandler_g.nextPage(); return false" id="next_page" class="buttonlinkenabled">next</button>

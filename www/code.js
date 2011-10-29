@@ -32,25 +32,6 @@ function getTorrentInfoArray()
   {
     return [];
   }
-
-  // TESTING
-  var rc = null
-  if ( calls == 0 )
-  {
-    torrentInfo1 = { "name":"Game of Thrones episode 1", "total_size":"500MB", "state":"downloading", "estimated_time":"1h" };
-    torrentInfo2 = { "name":"Nurse Jackie S01E01", "total_size":"523MB","state":"downloading", "estimated_time":"50m" };
-    rc = [torrentInfo1,torrentInfo2];
-  } 
-  else
-  {
-    torrentInfo1 = { "name":"Game of Thrones episode 1", "total_size":"500MB", "state":"downloading", "estimated_time":"59m" };
-    torrentInfo2 = { "name":"Nurse Jackie S01E01", "total_size":"523MB","state":"downloading", "estimated_time":"48m" };
-    torrentInfo3 = { "name":"Debian Linux.iso", "total_size":"523MB","state":"downloading", "estimated_time":"1hr" };
-    rc = [torrentInfo1,torrentInfo2,torrentInfo3];
-  }
-  calls = calls + 1;
-  return rc;
-  // END TESTING
 }
 
 /**
@@ -63,7 +44,13 @@ function startTorrentsUpdates()
 
   // Repeatedly get the set of torrent info from the daemon and store it in a 
   // global var.
+  repeatedlyGetTorrentsUsingAjax();
+}
+
+function repeatedlyGetTorrentsUsingAjax()
+{
   getTorrentsUsingAjax();
+  setTimeout("repeatedlyGetTorrentsUsingAjax()", torrentUpdateInterval);
 }
 
 function getTorrentsUsingAjax()
@@ -105,9 +92,6 @@ function getTorrentsUsingAjax()
       }
     }
   );
-  //var para = document.getElementById("javascript_error");
-  //setNodeText(para, "Sent Ajax request")
-  setTimeout("getTorrentsUsingAjax()", torrentUpdateInterval);
 }
 
 function getDetailedTorrentInfo(torrentName, callback)
@@ -239,7 +223,7 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
   );
 }
 
-function modifyTorrentsUsingAjax(torrentNameList, operation)
+function modifyTorrentsUsingAjax(torrentNameList, operation, onComplete)
 {
 
   params = {};
@@ -249,7 +233,7 @@ function modifyTorrentsUsingAjax(torrentNameList, operation)
     params["check" + torrentNameList[i]] = torrentNameList[i];
   }
 
-  new Ajax.Request('modify_torrent.rhtml',
+  new Ajax.Request('modify_files.rhtml',
     {
       method: 'get',
       parameters: params,
@@ -261,8 +245,6 @@ function modifyTorrentsUsingAjax(torrentNameList, operation)
 
         if (successful == "success")
         {
-          ajaxRetrievedTorrents_g = resp;
-          ajaxRetrievedTorrents_g.sort(torrentSort);
           // Clear any error messages
           clearTdText(para);
           para.setAttribute("class","collapsed");
@@ -271,30 +253,40 @@ function modifyTorrentsUsingAjax(torrentNameList, operation)
         {
           setNodeText(para, "Error: " + successful);
           para.setAttribute("class","note");
-          ajaxRetrievedTorrents_g = []
         }
-        updateTorrents(false);
-        
+        if ( null != onComplete )
+        {
+          onComplete();
+        }
       },
       onFailure: function(){
         setJavascriptError("Ajax error!")
-        ajaxRetrievedTorrents_g = []
-        updateTorrents(false);
       }
     }
   );
 }
 
+function reloadTorrentsAfterModify()
+{
+  getTorrentsUsingAjax();
+  updateTorrents(false);
+}
+
+function reloadFilesAfterModify()
+{
+  showFiles();
+}
+
 function removeSelectedTorrents(tableId)
 {
   names = getSelectedNamesInTable(tableId);
-  modifyTorrentsUsingAjax(names, "remove_torrent");
+  modifyTorrentsUsingAjax(names, "remove_torrent", reloadTorrentsAfterModify);
 }
 
 function pauseSelectedTorrents(tableId)
 {
   names = getSelectedNamesInTable(tableId);
-  modifyTorrentsUsingAjax(names, "pause");
+  modifyTorrentsUsingAjax(names, "pause", reloadTorrentsAfterModify);
 }
 
 function removeSelectedTorrentsFiles(tableId)
@@ -302,10 +294,75 @@ function removeSelectedTorrentsFiles(tableId)
   if ( confirmFilesDelete() )
   {
     names = getSelectedNamesInTable(tableId);
-    modifyTorrentsUsingAjax(names, "remove_files");
+    modifyTorrentsUsingAjax(names, "remove_torrent_files", reloadTorrentsAfterModify);
   }
 }
 
+function removeSelectedDatadirFiles(tableId)
+{
+  if ( confirm('Are you sure you want to delete this file?') )
+  {
+    names = getSelectedNamesInTable(tableId);
+
+    for(var i = 0; i < names.length; i++)
+    {
+      names[i] = currentFilesDir_g + "/" + names[i];
+    }
+
+    modifyTorrentsUsingAjax(names, "remove_files", reloadFilesAfterModify);
+  }
+}
+
+function logElementTree(elem)
+{
+  var parents = [];
+  var e = elem.parentNode;
+  while(null != e)
+  {
+    parents.push(e.tagName);
+    e = e.parentNode;
+  }
+
+  var indent = 0;
+  
+  for(var i = parents.length - 1; i >= 0; i--)
+  {
+    console.log(">" + stringMult(" ",indent) + parents[i]);
+    indent += 2;
+  }
+
+  logElementChildren(elem, indent);
+
+}
+
+function logElementChildren(elem, indent)
+{
+  if ( null == elem )
+  {
+    return;
+  }
+  console.log(stringMult(" ",indent) + elem.tagName);
+  var children = elem.childNodes;
+  if ( null == children )
+  {
+    return;
+  }
+  for( var n = 0; n < children.length; n++)
+  {
+    logElementChildren(children[n], indent+2);
+  }
+}
+
+function stringMult(str, times)
+{
+  var rc = "";
+
+  for(var i = 0; i < times; i++)
+  {
+    rc = rc + str;
+  }
+  return rc;
+}
 
 function torrentSort(t1,t2)
 {
@@ -362,9 +419,8 @@ function torrentStateToSortingNum(state)
 
 function updateTorrents(repeat)
 {
-  pageHandler_g.items = ajaxRetrievedTorrents_g;
-
   torrentInfoArray = getTorrentInfoArray();
+  pageHandler_g.items = ajaxRetrievedTorrents_g;
   torrentInfoArray = pageHandler_g.getItemsVisibleOnCurrentPage();
   pageHandler_g.updatePagesUi();
   updateTable('torrents_table_inprogress', torrentInfoArray);
@@ -556,15 +612,15 @@ function setRowValues(row, torrentInfo)
     var field = tds[td].getAttribute('field');
     if ( torrentInfo[field] )
     { 
-      // If the user passed a string, set that as the text in the td. 
-      // If an object was passed, assume that it's a DOM node to be added as a child of the td.
-      if ( typeof(torrentInfo[field]) == "string" || typeof(torrentInfo[field]) == "number")
+      // If the user passed a special DOM node under the key <field>Html then assume that it's a DOM node to be added as a child of the td.
+      // Otherwise, just set the string value as the text in the td. 
+      if ( null != torrentInfo[field + "Html"] )
       {
-        setNodeText(tds[td], torrentInfo[field]);
+        setNodeChild(tds[td], torrentInfo[field + "Html"]);
       }
       else
       {
-        setNodeChild(tds[td], torrentInfo[field]);
+        setNodeText(tds[td], torrentInfo[field]);
       }
     }
     else if ( field == 'sel' && torrentInfo['name'] )
@@ -992,10 +1048,8 @@ function refillTable(tableId, files)
 
     // Modify the name of the fileInfo object to include an icon representing the 
     // type of the file
-    var oldName = fileInfo['name'];
-    fileInfo['name'] = makeElementWithIconForFile(fileInfo);
+    fileInfo['nameHtml'] = makeElementWithIconForFile(fileInfo);
     setRowValues(newRow, fileInfo);
-    fileInfo['name'] = oldName;
   }
 
   setRowStyles(rows);

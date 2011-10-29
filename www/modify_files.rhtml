@@ -1,0 +1,84 @@
+<%
+  #
+  # This method returns a JSON-encoded array containing 
+  # the string "success" on success, or an error message on failure. 
+  #
+
+  require 'functions'
+  require "json" 
+
+  attribs = []
+  attribsHash = {}
+  errorMessage = nil
+
+  # This page expects the list of torrents to be passed as the value
+  # of variables beginning with the text "check" (from checkbox input values)
+  #
+  itemList = []
+  Apache.request.paramtable.each{ |k,v|
+    if k =~ /^check/
+      v.untaint
+      itemList.push v.to_s
+    end
+  }
+
+  # We expect the operation to perform to be passed as well
+  # 
+  operation = Apache.request.paramtable['operation'].to_s
+  operation.untaint
+  operation = nil if operation.length == 0
+  
+  if ! errorMessage && ! operation
+    errorMessage = "modify_torrent.rhtml expects the operation parameter to be passed"
+  end
+  
+  if operation != "remove_torrent" && operation != "remove_files" && operation != "pause" && operation != "remove_torrent_files"
+    errorMessage = "modify_torrent.rhtml was passed an invalid operation '#{operation}'"
+  end
+  
+  if ! errorMessage
+    client = createDaemonClient{ |err|
+      errorMessage = err
+    }
+  end
+
+  if ! errorMessage && client
+    if ! sessionIsValid?(client, Apache.request)
+      client.close
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if ! errorMessage && client
+
+    if operation == "remove_torrent"
+      itemList.each{ |t|
+        errorMessage = client.errorMsg if ! client.delTorrent(t)
+      }
+    elsif operation == "remove_torrent_files"
+      itemList.each{ |t|
+        errorMessage = client.errorMsg if ! client.delTorrent(t, true)
+      }
+    elsif operation == "pause"
+      itemList.each{ |t|
+        errorMessage = client.errorMsg if ! client.togglePaused(t)
+      }
+    elsif operation == "remove_files"
+      itemList.each{ |t|
+        errorMessage = client.errorMsg if ! client.delFile(t)
+      }
+    end
+    client.close
+    if errorMessage
+      puts JSON.generate([errorMessage])
+    else
+      puts JSON.generate(["success"])
+    end
+  else 
+    puts JSON.generate([errorMessage])
+  end
+%>
+
+
+

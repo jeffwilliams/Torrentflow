@@ -88,6 +88,8 @@ class RequestHandler
       handleListFilesRequest req
     elsif req.is_a? DaemonDownloadFileRequest
       handleDownloadFileRequest req
+    elsif req.is_a? DaemonDelFileRequest
+      handleDelFileRequest req
     else
       SyslogWrapper.instance.info "Got an unknown request type #{req.class}"
       nil
@@ -137,6 +139,9 @@ class RequestHandler
     raise "Override this method"
   end
   def handleListFilesRequest(req)
+    raise "Override this method"
+  end
+  def handleDelFileRequest(req)
     raise "Override this method"
   end
 end
@@ -408,6 +413,11 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def handleDelTorrentsRequest(req)
     resp = DaemonDelTorrentResponse.new
     i = findTorrentHandle(req.torrentName)
+    if ! i
+      resp.successful = false
+      resp.errorMsg = "No such torrent"
+      return resp
+    end
     if i.info.name == req.torrentName
       torrentName = i.info.name
       if req.deleteFiles
@@ -520,7 +530,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def handlePauseRequest(req)
     resp = DaemonPauseTorrentResponse.new
     handle = findTorrentHandle(req.torrentName)
-    return if ! handle
+    return resp if ! handle
     if handle.paused?
       if handle.respond_to?(:auto_managed=)
         handle.auto_managed = true
@@ -664,11 +674,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def handleDownloadFileRequest(req)
     begin
       # Make sure we don't download files outside of the data dir
-      absDataDir = Pathname.new($config.dataDir).realpath.to_s
-      absRequestedFile = Pathname.new(req.path).realpath.to_s
-      if absRequestedFile !~ /^#{absDataDir}/
-        return StreamMessage.new(0, nil)
-      end
+      return StreamMessage.new(0, nil) if ! pathIsUnderDataDir(req.path)
 
       length = File.size(req.path)
       # There is a possible race condition here. If we get the file size, and then
@@ -681,6 +687,23 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     rescue
       StreamMessage.new(0, nil)
     end
+  end
+
+  def handleDelFileRequest(req)
+    resp = DaemonListFilesResponse.new
+    # Make sure we don't download files outside of the data dir
+    if pathIsUnderDataDir req.path
+      begin
+        File.unlink req.path
+      rescue
+        resp.successful = false
+        resp.errorMsg = $!.to_s
+      end
+    else
+      resp.successful = false
+      resp.errorMsg = "Access is denied for the directory '#{req.path}'"
+    end
+    resp
   end
 
   private
@@ -831,4 +854,11 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     end
   end
 
+  # Returns true if the passed path is under the data dir path. That is, ensure that
+  # the path is something we downloaded as a torrent. This is usually used for access control.
+  def pathIsUnderDataDir(path)
+    absDataDir = Pathname.new($config.dataDir).realpath.to_s
+    absRequestedFile = Pathname.new(path).realpath.to_s
+    absRequestedFile =~ /^#{absDataDir}/
+  end
 end

@@ -135,6 +135,16 @@ class DaemonDownloadFileRequest < DaemonRequest
   attr_reader :path
 end
 
+# This is a request to delete a file that was downloaded 
+# as part of a torrent.
+class DaemonDelFileRequest < DaemonRequest
+  def initialize(path)
+    @path = path
+  end
+
+  attr_reader :path
+end
+
 ####### RESPONSES ########
 class DaemonListTorrentsResponse < DaemonResponse
   def initialize
@@ -233,4 +243,10 @@ class DaemonListFilesResponse < DaemonResponse
   attr_accessor :files
   # The directory containing the files
   attr_accessor :dir
+end
+
+class DaemonDelFileResponse < DaemonResponse
+  def initialize
+    super
+  end
 end

@@ -187,6 +187,15 @@ class DaemonClient
     rc
   end
 
+  # Delete a file from the daemon's data directory. 
+  # Returns true if the deletion succeeded, false otherwise
+  def delFile(path)
+    req = DaemonDelFileRequest.new(path)
+    sendAndRecv(req){ |resp|
+      resp.successful
+    }
+  end
+
   private
   def connect(addr, port)
     if @clientSock

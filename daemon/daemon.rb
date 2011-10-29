@@ -141,7 +141,6 @@ begin
   #requestHandler = TestingRequestHandler.new(terminateRequestHandler)
   genericServer.start( 
     Proc.new{ |clientSock, addr, port|
-      #requestHandler = TestingRequestHandler.new(terminateRequestHandler)
       requestHandler.manage(clientSock, addr, port)
     }         
   ){ 
