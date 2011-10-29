@@ -169,7 +169,7 @@
     <script language="javascript" src="prototype.js"></script>
     <script language="javascript" src="code.js"></script>
   </head>
-   <body onload="showFiles();"> 
+   <body onload="startFilesUpdates();"> 
     <div id="maindiv_border">
         <div id="maindiv">
           <div id="title">
@@ -196,6 +196,15 @@
             end
           %>
           <div class="inputs">
+            <div style="float: left;">
+              <table>
+                <tr>
+                  <td>
+                    <button onclick="getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem); return false;">refresh</button>
+                  </td>
+                </tr>
+              </table>
+            </div>
             <div style="float: right;">
               <table style="text-align: right;">
                 <tr>

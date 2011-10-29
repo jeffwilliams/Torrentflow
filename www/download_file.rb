@@ -45,7 +45,7 @@ else
   if client
     # Download file
 
-    mimeType = Mime.instance.getMimeTypeOfFilename(File.basename(path))
+    mimeType = Mime.instance.getMimeTypeOfFilename(path)
     mimeType = "application/octet-stream" if ! mimeType
  
     request.sync = true   

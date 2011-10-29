@@ -1,3 +1,4 @@
+require 'mahoro'
 
 # Singleton for handling extension to MIME type mapping
 
@@ -20,7 +21,17 @@ class Mime
   def getMimeTypeOfFilename(file)
     ext = File.extname(file).downcase
     ext = ext[1,ext.length] if ext # Remove first .
-    @mimeTypeHash[ext]
+    rc = @mimeTypeHash[ext]
+    if ( ! rc )
+      # File extension check failed. Use libmagic/file(1) through the mahoro lib
+      begin
+        mahMahoro = Mahoro.new(Mahoro::SYMLINK|Mahoro::MIME) # MAH MAHORO!
+        rc = mahMahoro.file(file)
+      rescue
+        rc = nil
+      end
+    end
+    rc
   end
 
   def dump(io)
@@ -51,6 +62,5 @@ end
 # Test
 #inst = Mime.instance
 #inst.dump($stdout)
-#puts inst.getMimeTypeOfFilename("test.avi")
-#puts inst.getMimeTypeOfFilename("test.rb")
+#puts inst.getMimeTypeOfFilename("../README")
 

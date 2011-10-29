@@ -5,6 +5,8 @@ DygraphLayout=function(a){this.dygraph_=a;this.datasets=new Array();this.annotat
 // The interval in milliseconds at which the torrent info is refreshed.
 var torrentUpdateInterval = 2000;
 
+// The interval in milliseconds at which the file info is refreshed.
+var fileUpdateInterval = 5000;
 
 var ajaxRetrievedTorrents_g = null
 
@@ -40,7 +42,7 @@ function getTorrentInfoArray()
 function startTorrentsUpdates()
 {
   pageHandler_g = new PageHandler();
-  pageHandler_g.onPageChange = updateTorrentsNoRepeat;
+  pageHandler_g.onPageChange = updateTorrents;
 
   // Repeatedly get the set of torrent info from the daemon and store it in a 
   // global var.
@@ -51,6 +53,25 @@ function repeatedlyGetTorrentsUsingAjax()
 {
   getTorrentsUsingAjax();
   setTimeout("repeatedlyGetTorrentsUsingAjax()", torrentUpdateInterval);
+}
+
+/**
+ * Start the repetition of updating the list of files. 
+ */
+function startFilesUpdates()
+{
+  pageHandler_g = new PageHandler();
+  pageHandler_g.onPageChange = updateFiles;
+
+  // Repeatedly get the set of file info from the daemon and store it in a 
+  // global var.
+  repeatedlyGetFilesUsingAjax();
+}
+
+function repeatedlyGetFilesUsingAjax()
+{
+  getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
+  setTimeout("repeatedlyGetFilesUsingAjax()", fileUpdateInterval);
 }
 
 function getTorrentsUsingAjax()
@@ -82,13 +103,13 @@ function getTorrentsUsingAjax()
           para.setAttribute("class","note");
           ajaxRetrievedTorrents_g = []
         }
-        updateTorrents(false);
+        updateTorrents();
         
       },
       onFailure: function(){
         setJavascriptError("Ajax error!")
         ajaxRetrievedTorrents_g = []
-        updateTorrents(false);
+        updateTorrents();
       }
     }
   );
@@ -269,7 +290,7 @@ function modifyTorrentsUsingAjax(torrentNameList, operation, onComplete)
 function reloadTorrentsAfterModify()
 {
   getTorrentsUsingAjax();
-  updateTorrents(false);
+  updateTorrents();
 }
 
 function reloadFilesAfterModify()
@@ -417,7 +438,10 @@ function torrentStateToSortingNum(state)
   
 }
 
-function updateTorrents(repeat)
+/**
+  Update the UI to display the torrents last retrieved by getTorrentsUsingAjax.
+*/
+function updateTorrents()
 {
   torrentInfoArray = getTorrentInfoArray();
   pageHandler_g.items = ajaxRetrievedTorrents_g;
@@ -425,17 +449,20 @@ function updateTorrents(repeat)
   pageHandler_g.updatePagesUi();
   updateTable('torrents_table_inprogress', torrentInfoArray);
   updateStatusLine();
-
-  if ( repeat )
-  {
-    setTimeout("updateTorrents(true)", torrentUpdateInterval);
-  }
 }
 
-function updateTorrentsNoRepeat()
+/**
+  Update the UI to display the files last retrieved by getFilesUsingAjax.
+*/
+function updateFiles()
 {
-  updateTorrents(false);
+  pageHandler_g.items = currentFiles_g;
+  files = pageHandler_g.getItemsVisibleOnCurrentPage();
+  pageHandler_g.updatePagesUi();
+  refillTable('file_table', files);
+  updateStatusLine();
 }
+
 
 /*
  * Using the passed torrentInfo, update the table with the specified 
@@ -1118,18 +1145,10 @@ function setJavascriptErrorToFirstElem(arr)
   setJavascriptError(arr[0]);
 }
 
-function updateFiles()
-{
-  pageHandler_g.items = currentFiles_g;
-  files = pageHandler_g.getItemsVisibleOnCurrentPage();
-  pageHandler_g.updatePagesUi();
-  refillTable('file_table', files);
-  updateStatusLine();
-}
-
 function handleRetrievedFiles(files)
 {
   // Directory is first element
+  oldDir = currentFilesDir_g
   currentFilesDir_g = files.shift();
 
   var dirElem = document.getElementById("files_title");
@@ -1138,7 +1157,11 @@ function handleRetrievedFiles(files)
     setNodeText(dirElem, "Files under " + currentFilesDir_g );
   }
 
-  pageHandler_g.setPage(1);
+  // Only move to the first page if the directory has changed.
+  if ( oldDir != currentFilesDir_g )
+  {
+    pageHandler_g.setPage(1);
+  }
   currentFiles_g = files;
   updateFiles();
 }
