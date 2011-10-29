@@ -27,6 +27,7 @@ Running requires:
   eruby
   libjson-ruby
   libtorrent-rasterbar (version 0.13 or 0.14)
+  libmahoro-ruby (Ruby bindings for libmagic)
 
 Building requires:
 
