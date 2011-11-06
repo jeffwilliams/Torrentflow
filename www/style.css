@@ -255,7 +255,6 @@ form
   filter:alpha(opacity=80);
   */
   border: 0.125em solid #000000;
-  /*background-color: #fefefe;*/
   background-color: #bfabab;
   visibility: hidden;
 }
@@ -267,6 +266,8 @@ form
   text-align: center;
   padding: 0.5em;
   border-bottom: 0.0625em solid #000000;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .indented
@@ -288,12 +289,12 @@ form
   border: 1px solid #000000;
   margin: 0.125em;
   /* Workaround for vertical text on the graph label not working */
-  margin-left: 4em;
 }
 
 #overlay_alerts_textarea
 {
   width: 100%;
+  position: relative;
   height: 15em;
   border: 1px solid #000000;
 }
@@ -306,4 +307,59 @@ form
 a
 {
   color: #000000;
+}
+
+.tablabel
+{
+  display: inline;
+  border: 1px solid #000000;
+  cursor: pointer;
+  padding: 2px;
+  margin: 0px;
+  z-index: 1001;
+  position: relative;
+  top: -1;
+  background-color: #bfabab;
+}
+
+.tablabelselected
+{
+  display: inline;
+  border: 1px solid #000000;
+  /*border-top: 1px solid #000000;
+  border-left: 1px solid #000000;
+  border-right: 1px solid #000000;*/
+  cursor: pointer;
+  padding: 2px;
+  margin: 0px;
+  z-index: 1001;
+  position: relative;
+  top: -1;
+  background-color: #cc6633;
+}
+
+#overlaytablabels
+{
+  margin-top: 1em;
+}
+
+.tabbody
+{
+  border-top: 0.0625em solid #000000;
+  position: absolute;
+  top: 0px;
+  visibility: hidden;
+  width: inherit;
+}
+
+.tabbody>div
+{
+  padding: 2em;
+}
+
+#overlaytabcontainer
+{
+  /*border: 2px dashed #000000;*/
+  position: absolute;
+  width: 100%;
 }

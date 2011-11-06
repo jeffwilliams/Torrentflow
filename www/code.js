@@ -891,6 +891,92 @@ function PageHandler_setPage(num)
 
 /*********** END PAGE HANDLING  *************/
 
+/*********** TAB WIDGET  *************/
+
+/**
+ tabDivs: an array of div HTMLElement objects that are the actual tabs with names. These are always 
+          visible, though may change appearance. 
+ tabContentDivs: an array of divs that correspond to the tabsDivs. Only one of these is displayed at a time. 
+*/
+function TabWidget(tabDivs, tabContentDivs, selectedStyleClass, unselectedStyleClass)
+{
+  this.tabDivs = tabDivs;
+  this.tabContentDivs = tabContentDivs;
+  this.showTab = TabWidget_showTab;
+  this.selectedStyleClass = selectedStyleClass;
+  this.unselectedStyleClass = unselectedStyleClass;
+  this.setVisible = TabWidget_setVisible;
+  this.visible = false;
+  this.currentTab = null;
+
+  myself = this; // allow myself to introduce...myself
+  // Create event handlers on the tabDivs
+  id = new Array();
+  for(var i = 0; i < tabDivs.length; i++)
+  {
+    tabDivs[i].onclick = TabWidget_makeOnClick(this, tabContentDivs[i].getAttribute('id'));
+  }
+ 
+}
+
+function TabWidget_showTab(id)
+{
+  this.currentTab = id;
+
+  if ( ! this.visible )
+    return;  
+
+  for(var i = 0; i < this.tabContentDivs.length; i++)
+  {
+    if ( this.tabContentDivs[i].getAttribute('id') == id )
+    {
+      this.tabContentDivs[i].style.visibility = 'visible';
+      this.tabDivs[i].setAttribute('class',this.selectedStyleClass);
+    }
+    else
+    {
+      this.tabContentDivs[i].style.visibility = 'hidden';
+      this.tabDivs[i].setAttribute('class',this.unselectedStyleClass);
+    }
+  }
+
+}
+
+function TabWidget_setVisible(visible)
+{
+
+  if ( visible )
+    str = 'visible';
+  else
+    str = 'hidden';
+    
+  for(var i = 0; i < this.tabDivs.length; i++)
+  {
+    this.tabDivs[i].style.visibility = str;
+    this.tabContentDivs[i].style.visibility = str;
+  }
+
+  this.visible = visible;
+
+  if( visible && null != this.currentTab)
+  {
+    this.showTab(this.currentTab);
+  }
+
+}
+
+function TabWidget_makeOnClick(tabwidget, id)
+{
+  return function ()
+  {
+    tabwidget.showTab(id);
+  };
+}
+
+
+/*********** END TAB WIDGET *************/
+
+
 function updateStatusLine()
 {
   torrentInfoArray = getTorrentInfoArray();
@@ -1001,6 +1087,8 @@ function showOverlay(torrentInfo)
     alert ("error: " + err.description);
   }
 
+  tabwidget.setVisible(true);
+
   return false;
 }
 
@@ -1029,6 +1117,7 @@ function hideOverlay()
 {
   var overlay = document.getElementById("overlay");
   overlay.style.visibility = 'hidden';
+  tabwidget.setVisible(false);
 }
 
 function confirmFilesDelete()
@@ -1176,3 +1265,22 @@ function showFiles()
   getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
 }
 
+var tabwidget = null;
+function initOverlayTabs()
+{
+  var tablabels = [
+    document.getElementById('tablabel1'),
+    document.getElementById('tablabel2'),
+    document.getElementById('tablabel3')
+  ];
+  
+  var tabs = [
+    document.getElementById('tab1'),
+    document.getElementById('tab2'),
+    document.getElementById('tab3')
+  ];
+
+  tabwidget = new TabWidget(tablabels, tabs, "tablabelselected", "tablabel");
+
+  tabwidget.showTab('tab1');
+}

@@ -167,7 +167,7 @@
     <script language="javascript" src="code.js"></script>
   </head>
 <!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
-   <body onload="startTorrentsUpdates();"> 
+   <body onload="startTorrentsUpdates(); initOverlayTabs();"> 
     <div id="maindiv_border">
         <div id="maindiv">
           <div id="title">
@@ -272,39 +272,50 @@
     <!-- This is the overlay div -->
     <div id="overlay">
       <h1 class="overlaytitle" id="overlay_title">Title</h1>
-      <p>
-        <table>
-          <tr><td>
-            <table>
-              <tr><th>Creator</th><td id="overlay_creator_col"></td></tr>
-              <tr><th>Comment</th><td id="overlay_comment_col"></td></tr>
-              <tr><th>Size</th><td id="overlay_size_col"></td></tr>
-              <tr><th>Status</th><td id="overlay_status_col"></td></tr>
-              <tr><th>Progress</th><td id="overlay_progress_col"></td></tr>
-              <tr><th>Peers</th><td id="overlay_peers_col"></td></tr>
-              <tr><th>Download Rate</th><td id="overlay_downloadrate_col"></td></tr>
-              <tr><th>Upload Rate</th><td id="overlay_uploadrate_col"></td></tr>
-              <tr><th>Download Rate Limit</th><td id="overlay_downloadratelimit_col"></td></tr>
-              <tr><th>Upload Rate Limit</th><td id="overlay_uploadratelimit_col"></td></tr>
-              <tr><th>Upload Ratio</th><td id="overlay_ratio_col"></td></tr>
-              <tr><th>Max Connections</th><td id="overlay_max_connections_col"></td></tr>
-              <tr><th>Max Uploads</th><td id="overlay_max_uploads_col"></td></tr>
-            </table>
-          </td>
-          <td>
-            <div id="graphdiv">
-              Graph is here
-            <div>
-          </td></tr>
-        <table>
-      </p>
-      <div class="indented">
-        <h2>Alerts:</h2>
-        <textarea id="overlay_alerts_textarea">
-        </textarea>
-        <div id="overlay_alerts_div">
+        <div id="overlaytablabels">
+          <div id="tablabel1" class="tablabel">information</div><div id="tablabel2" class="tablabel">graph</div><div id="tablabel3" class="tablabel">alerts</div>
         </div>
-      </div>
+        <div id="overlaytabcontainer">
+          <div class="tabbody" id="tab1">
+            <div>
+              <table>
+              <tr><td>
+                <table>
+                  <tr><th>Creator</th><td id="overlay_creator_col"></td></tr>
+                  <tr><th>Comment</th><td id="overlay_comment_col"></td></tr>
+                  <tr><th>Size</th><td id="overlay_size_col"></td></tr>
+                  <tr><th>Status</th><td id="overlay_status_col"></td></tr>
+                  <tr><th>Progress</th><td id="overlay_progress_col"></td></tr>
+                  <tr><th>Peers</th><td id="overlay_peers_col"></td></tr>
+                  <tr><th>Download Rate</th><td id="overlay_downloadrate_col"></td></tr>
+                  <tr><th>Upload Rate</th><td id="overlay_uploadrate_col"></td></tr>
+                  <tr><th>Download Rate Limit</th><td id="overlay_downloadratelimit_col"></td></tr>
+                  <tr><th>Upload Rate Limit</th><td id="overlay_uploadratelimit_col"></td></tr>
+                  <tr><th>Upload Ratio</th><td id="overlay_ratio_col"></td></tr>
+                  <tr><th>Max Connections</th><td id="overlay_max_connections_col"></td></tr>
+                  <tr><th>Max Uploads</th><td id="overlay_max_uploads_col"></td></tr>
+                </table>
+              </td>
+              </tr>
+              </table>
+            </div>
+          </div>
+          <div class="tabbody" id="tab2">
+            <div>
+              <div id="graphdiv">
+                Graph failed to load.
+              </div>
+            </div>
+          </div>
+          <div class="tabbody" id="tab3">
+            <div>
+              <textarea id="overlay_alerts_textarea">
+              </textarea>
+              <div id="overlay_alerts_div">
+              </div>
+            </div>
+          </div>
+        </div>
       <button class="hidebutton" onclick="hideOverlay();">hide</button>
     </div>
   </body>

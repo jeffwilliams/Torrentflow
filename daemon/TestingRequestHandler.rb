@@ -176,7 +176,7 @@ class TestingRequestHandler < RequestHandler
   end
 
   def handleGetAlertsRequest(req)
-    alerts = []
+    alerts = ["Couldn't connect to tracker or something","Bad encoding"]
     resp = DaemonGetAlertsResponse.new(alerts)
     resp
   end
