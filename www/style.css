@@ -282,13 +282,13 @@ form
   right: 0.5em;
 }
 
-#graphdiv
+.graphdiv
 {
   width: 40em;
   height: 20em;
   border: 1px solid #000000;
   margin: 0.125em;
-  /* Workaround for vertical text on the graph label not working */
+  position: absolute; 
 }
 
 #overlay_alerts_textarea

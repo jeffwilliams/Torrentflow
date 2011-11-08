@@ -8,6 +8,9 @@ var torrentUpdateInterval = 2000;
 // The interval in milliseconds at which the file info is refreshed.
 var fileUpdateInterval = 5000;
 
+// The interval in milliseconds at which the overlay info is refreshed.
+var overlayUpdateInterval = 2000;
+
 var ajaxRetrievedTorrents_g = null
 
 // The page handler object
@@ -18,6 +21,13 @@ var torrentTableStyles = ['namecol', 'sizecol', 'statuscol', 'ratescol', 'progre
 
 var filesTableFields = ['name', 'modified', 'size', 'sel'];
 var filesTableStyles = ['namecol', 'modifiedcol', 'sizecol', 'selcol'];
+
+// The currently selected torrent when we are showing the torrent overlay
+var currentTorrentNameForOverlay_g = null;
+var overlayVisible_g = false;
+
+var graphDivDoubleBuffer_g = null;
+
 
 /*
  * This function should get the up-to-date torrent information. It will probably
@@ -900,14 +910,19 @@ function PageHandler_setPage(num)
 */
 function TabWidget(tabDivs, tabContentDivs, selectedStyleClass, unselectedStyleClass)
 {
-  this.tabDivs = tabDivs;
-  this.tabContentDivs = tabContentDivs;
   this.showTab = TabWidget_showTab;
+  this.setVisible = TabWidget_setVisible;
+  this.setOnTabChange = TabWidget_setOnTabChange;
+  this.setOnVisibilityChange = TabWidget_setOnVisibilityChange;
+  this.getCurrentTabId = TabWidget_getCurrentTabId;
+
   this.selectedStyleClass = selectedStyleClass;
   this.unselectedStyleClass = unselectedStyleClass;
-  this.setVisible = TabWidget_setVisible;
+  this.tabDivs = tabDivs;
+  this.tabContentDivs = tabContentDivs;
   this.visible = false;
   this.currentTab = null;
+  this.onTabChange = null;
 
   myself = this; // allow myself to introduce...myself
   // Create event handlers on the tabDivs
@@ -940,6 +955,11 @@ function TabWidget_showTab(id)
     }
   }
 
+  if ( null != this.onTabChange )
+  {
+    this.onTabChange(id);
+  }
+
 }
 
 function TabWidget_setVisible(visible)
@@ -963,6 +983,11 @@ function TabWidget_setVisible(visible)
     this.showTab(this.currentTab);
   }
 
+  if ( null != this.onVisibilityChange )
+  {
+    this.onVisibilityChange(this, visible);
+  }
+
 }
 
 function TabWidget_makeOnClick(tabwidget, id)
@@ -973,9 +998,92 @@ function TabWidget_makeOnClick(tabwidget, id)
   };
 }
 
+/**
+ Pass a function that gets called when the selected tab changes.
+ The function is called with the id of the tabContentDiv being activated.
+*/
+function TabWidget_setOnTabChange(onTabChange)
+{
+  this.onTabChange = onTabChange;
+}
+
+/**
+ Pass a function that gets called when the tab widget changes visibility.
+ The function is called with the tabwidget as the first parameter, and the visibility
+ as a boolean as the second parameter (true == visible).
+*/
+function TabWidget_setOnVisibilityChange(onChange)
+{
+  this.onVisibilityChange = onChange;
+}
+
+function TabWidget_getCurrentTabId()
+{
+  return this.currentTab;
+}
 
 /*********** END TAB WIDGET *************/
 
+/*********** DOUBLE BUFFER *************/
+
+/**
+  This is a class for double-buffering draws that draw to an HTML element but whos
+  draws take a while to complete. For example, the Dygraph drawing takes some time between
+  when the graph is blank to when it has data drawn, which shows as a flicker when 
+  rendering periodic changes to the graph. This class can be used to have Dygraph draw
+  to a hidden div and then show it when the drawing is complete. When the completed graph is
+  shown another div that was previously visible in the same place is hidden and the next
+  draw will be done to that hidden div.
+*/
+function DoubleBuffer(element1, element2)
+{
+  this.getHidden = DoubleBuffer_getHidden;
+  this.swap = DoubleBuffer_swap;
+  this.setVisible = DoubleBuffer_setVisible;
+
+  this.elements = [element1, element2];
+  this.visibleElement = 1;
+  this.swap();
+  this.visible = true;
+}
+
+/**
+Get the div that is hidden, and not shown to the user currently.
+*/
+function DoubleBuffer_getHidden()
+{
+  return this.elements[1 - this.visibleElement];
+}
+
+/**
+Swap the buffers. Make the div that is hidden visible, and the one that is visible hidden.
+*/
+function DoubleBuffer_swap()
+{
+  this.visibleElement = 1 - this.visibleElement;
+
+  this.elements[1-this.visibleElement].style.visibility = 'hidden';
+  if ( this.visible )
+    this.elements[this.visibleElement].style.visibility = 'visible';
+}
+
+/**
+  If v is false, sets both divs to be invisible. If true, sets the 
+  div that is meant to be visible to be visible.
+*/
+function DoubleBuffer_setVisible(v)
+{
+  if ( v )
+  {
+    this.elements[this.visibleElement].style.visibility = 'visible';
+  }
+  else
+  {
+    this.elements[this.visibleElement].style.visibility = 'hidden';
+  }
+  this.visible = v;
+}
+/*********** END DOUBLE BUFFER *************/
 
 function updateStatusLine()
 {
@@ -1027,9 +1135,25 @@ function torrentDetailsClicked(e)
 
   // Get the name of the torrent from the row's 'code' property
   name = this.parentNode.parentNode.getAttribute('code');
-  getDetailedTorrentInfo(name, showOverlay);
-  getAlerts(name, addAlertsToOverlay); 
+  currentTorrentNameForOverlay_g = name;
+  showOverlay();
+  repeatedlyUpdateOverlay();
   return false;
+}
+
+function updateOverlay()
+{
+  getDetailedTorrentInfo(currentTorrentNameForOverlay_g, loadOverlayContents);
+  getAlerts(currentTorrentNameForOverlay_g, addAlertsToOverlay); 
+}
+
+function repeatedlyUpdateOverlay()
+{
+  if ( overlayVisible_g )
+  {
+    updateOverlay();
+    setTimeout("repeatedlyUpdateOverlay()", overlayUpdateInterval);
+  }
 }
 
 function localEncodeURI(uri)
@@ -1038,12 +1162,44 @@ function localEncodeURI(uri)
   return encodeURIComponent(uri);
 }
 
-function showOverlay(torrentInfo)
+/**
+This function is called when the Dygraph has just finished being drawn.
+It's used to swap the double-buffer divs to make the div the graph was drawn
+to become visible.
+*/
+function overlayGraphDrawnCallback(dygraph, isInitial)
+{
+  if ( isInitial ) 
+  { 
+    graphDivDoubleBuffer_g.swap(); 
+  }
+}
+
+/**
+Show the overlay div. This doesn't populate it's contents.
+*/
+function showOverlay()
 {
   var overlay = document.getElementById("overlay");
   overlay.style.visibility = 'visible';
+  overlayVisible_g = true;
   /*setNodeText(overlay, contents);*/
 
+  tabwidget.setVisible(true);
+  if ( null == graphDivDoubleBuffer_g )
+  {
+    graphDivDoubleBuffer_g = new DoubleBuffer(document.getElementById("graphdiv1"), document.getElementById("graphdiv2"));
+    graphDivDoubleBuffer_g.setVisible(false);
+  }
+
+  return false;
+}
+
+/**
+Populate the contents of the overlay div
+*/
+function loadOverlayContents(torrentInfo)
+{
   getNodeAndSetText('overlay_title', torrentInfo['name']);
   getNodeAndSetText('overlay_creator_col', torrentInfo['creator']);
   getNodeAndSetText('overlay_comment_col', torrentInfo['comment']);
@@ -1067,11 +1223,12 @@ function showOverlay(torrentInfo)
   // Generate the graph
   var url = "get_torrentgraphdata.rhtml?name=" + localEncodeURI(name);
   var elem = document.getElementById("graphdiv");
+
   try{
   g = new Dygraph(
 
     // containing div
-    document.getElementById("graphdiv"),
+    graphDivDoubleBuffer_g.getHidden(),
 
     // CSV or path to a CSV file.
     url,
@@ -1079,17 +1236,14 @@ function showOverlay(torrentInfo)
     {
       title: "Download Rate while downloading",
       xlabel: "Time (minutes)",
-      ylabel: "Rate (KB/s)"
+      ylabel: "Rate (KB/s)",
+      drawCallback: overlayGraphDrawnCallback
     }
   );
   } catch(err)
   {
     alert ("error: " + err.description);
   }
-
-  tabwidget.setVisible(true);
-
-  return false;
 }
 
 function addAlertsToOverlay(alerts)
@@ -1118,6 +1272,9 @@ function hideOverlay()
   var overlay = document.getElementById("overlay");
   overlay.style.visibility = 'hidden';
   tabwidget.setVisible(false);
+  if ( null != graphDivDoubleBuffer_g )
+    graphDivDoubleBuffer_g.setVisible(false);
+  overlayVisible_g = false;
 }
 
 function confirmFilesDelete()
@@ -1265,6 +1422,40 @@ function showFiles()
   getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem);
 }
 
+function overlayTabsOnChange(tabId)
+{
+  // tab2 is the tab that contains the Dygraph divs
+  if ( tabId == "tab2" )
+  {
+    if ( null != graphDivDoubleBuffer_g )
+    {
+      graphDivDoubleBuffer_g.setVisible(true);
+    }
+  }
+  else
+  {
+    if ( null != graphDivDoubleBuffer_g )
+    {
+      graphDivDoubleBuffer_g.setVisible(false);
+    }
+  }
+}
+
+function overlayTabsOnVisibilityChange(tabwidget, v)
+{
+  if ( null != graphDivDoubleBuffer_g )
+  {
+    if ( v && tabwidget.getCurrentTabId() == "tab2" )
+    {
+      graphDivDoubleBuffer_g.setVisible(true);
+    }
+    else
+    {
+      graphDivDoubleBuffer_g.setVisible(false);
+    }
+  }
+}
+
 var tabwidget = null;
 function initOverlayTabs()
 {
@@ -1281,6 +1472,8 @@ function initOverlayTabs()
   ];
 
   tabwidget = new TabWidget(tablabels, tabs, "tablabelselected", "tablabel");
+  tabwidget.setOnTabChange(overlayTabsOnChange);
+  tabwidget.setOnVisibilityChange(overlayTabsOnVisibilityChange);
 
   tabwidget.showTab('tab1');
 }

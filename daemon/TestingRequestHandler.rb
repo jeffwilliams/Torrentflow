@@ -8,6 +8,30 @@ class TestingRequestHandler < RequestHandler
     super(terminateRequestHandler)
     # Setup some fake data.
     $testingTorrentList.addTorrent("[kat.ph]game.of.thrones.season.1.complete.hdtvrip.720p.x264.aac.ameet6.torrent")
+
+    # Fake graph data.
+    @dataPoints = []
+    @dataPoints.push DataPoint.new(0, 0)
+    @dataPoints.push DataPoint.new(1, 5)
+    @dataPoints.push DataPoint.new(2, 20)
+    @dataPoints.push DataPoint.new(3, 30)
+    @dataPointsMutex = Mutex.new
+    
+
+    Thread.new{ 
+      begin
+        i = 4
+        while @dataPoints.size < 100
+          sleep 2
+          @dataPointsMutex.synchronize{
+            @dataPoints.push DataPoint.new(i,rand(50-28)+28)
+          }
+          i += 1
+        end
+      rescue
+        puts $!
+      end
+    }
   end
   protected
   def handleListTorrentsRequest(req)
@@ -193,12 +217,10 @@ class TestingRequestHandler < RequestHandler
   def handleGraphInfoRequest(req)
     resp = DaemonGraphInfoResponse.new
 
-    data = []
-    data.push DataPoint.new(0, 0)
-    data.push DataPoint.new(1, 5)
-    data.push DataPoint.new(2, 20)
-    data.push DataPoint.new(3, 30)
-    resp.dataPoints = data
+    
+    @dataPointsMutex.synchronize{
+      resp.dataPoints = Array.new(@dataPoints)
+    }
 
     resp
   end
