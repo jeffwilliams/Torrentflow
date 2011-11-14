@@ -44,7 +44,7 @@ def daemonize
 end
 
 def handleSignal
-  SyslogWrapper.instance.info "Shutting down because of signal."
+  SyslogWrapper.info "Shutting down because of signal."
   exit 0
 end
 
@@ -86,7 +86,7 @@ def parseConfig
   # Find config file
   configPath = Config::findConfigFile
   if ! configPath
-    SyslogWrapper.instance.info "Error: Can't locate config file #{Config::TorrentConfigFilename} in the current dir or in /etc."
+    SyslogWrapper.info "Error: Can't locate config file #{Config::TorrentConfigFilename} in the current dir or in /etc."
     exit 1
   end
 
@@ -120,7 +120,7 @@ end
 File.umask(0002)
 
 daemonize if $optDaemonize
-SyslogWrapper.instance.info "Started."
+SyslogWrapper.info "Started."
 
 # Setup signal handlers
 Signal.trap('SIGINT'){ 
@@ -144,9 +144,9 @@ begin
       requestHandler.manage(clientSock, addr, port)
     }         
   ){ 
-    SyslogWrapper.instance.info "Listening on port #{$config.listenPort}."
+    SyslogWrapper.info "Listening on port #{$config.listenPort}."
   }
 rescue
-  SyslogWrapper.instance.info "Got exception at top level: #{$!}"
-  SyslogWrapper.instance.info "#{$!.backtrace.join("  ")}"
+  SyslogWrapper.info "Got exception at top level: #{$!}"
+  SyslogWrapper.info "#{$!.backtrace.join("  ")}"
 end

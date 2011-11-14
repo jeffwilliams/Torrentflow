@@ -20,7 +20,7 @@ class Config
         return handleYaml(yaml, dontValidateDirs)
       }
     else
-      SyslogWrapper.instance.info "Loading config file failed: file '#{filename}' doesn't exist."
+      SyslogWrapper.info "Loading config file failed: file '#{filename}' doesn't exist."
     end
     rc
   end
@@ -82,7 +82,7 @@ class Config
     return false if ! dontValidateDirs && ! validateDir(@dataDir, 'data_dir')
     @passwordFile = yaml['password_file']
     if ! @passwordFile
-      SyslogWrapper.instance.info "Error: the configuration file had no 'password_file' setting."
+      SyslogWrapper.info "Error: the configuration file had no 'password_file' setting."
       return false
     end
 
@@ -90,16 +90,16 @@ class Config
     @torrentPortHigh = yaml['torrent_port_high'].to_i
 
     if ! @torrentPortLow || ! @torrentPortHigh
-      SyslogWrapper.instance.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are missing."
+      SyslogWrapper.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are missing."
       return false
     end
 
     if @torrentPortLow > @torrentPortHigh
-      SyslogWrapper.instance.info "Error: the configuration file torrent_port_low is > torrent_port_high."
+      SyslogWrapper.info "Error: the configuration file torrent_port_low is > torrent_port_high."
       return false
     end
     if @torrentPortLow == 0 || @torrentPortHigh == 0
-      SyslogWrapper.instance.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are invalid."
+      SyslogWrapper.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are invalid."
       return false
     end
 
@@ -109,19 +109,19 @@ class Config
 
     @outEncPolicy = validateAndConvertEncPolicy(@outEncPolicy)
     if ! @outEncPolicy
-      SyslogWrapper.instance.info "Error: the configuration file out_enc_policy setting is invalid"
+      SyslogWrapper.info "Error: the configuration file out_enc_policy setting is invalid"
       return false
     end
 
     @inEncPolicy = validateAndConvertEncPolicy(@inEncPolicy)
     if ! @inEncPolicy
-      SyslogWrapper.instance.info "Error: the configuration file in_enc_policy setting is invalid"
+      SyslogWrapper.info "Error: the configuration file in_enc_policy setting is invalid"
       return false
     end
 
     @allowedEncLevel = validateAndConvertEncLevel(@allowedEncLevel)
     if ! @allowedEncLevel
-      SyslogWrapper.instance.info "Error: the configuration file allowed_enc_level setting is invalid"
+      SyslogWrapper.info "Error: the configuration file allowed_enc_level setting is invalid"
       return false
     end
 
@@ -129,7 +129,7 @@ class Config
     if @ratio
       f = @ratio.to_f
       if f != 0.0 && f < 1.0
-        SyslogWrapper.instance.info "Error: the configuration file ratio setting is invalid. Ratio must be 0, or a number >= 1.0"
+        SyslogWrapper.info "Error: the configuration file ratio setting is invalid. Ratio must be 0, or a number >= 1.0"
         return false
       end
     else
@@ -138,7 +138,7 @@ class Config
 
     @seedingTime = yaml['seedingtime']
     if ! @seedingTime.is_a?(Integer)
-      SyslogWrapper.instance.info "Error: the configuration file seedingtime setting is invalid. It must be an integer"
+      SyslogWrapper.info "Error: the configuration file seedingtime setting is invalid. It must be an integer"
       return false  
     end
 
@@ -168,19 +168,19 @@ class Config
   def validateDir(dir, settingName)
     dir.untaint
     if ! dir
-      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
+      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
       return false;
     elsif ! File.exists?(dir)
-      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
+      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
       return false;
     elsif ! File.directory?(dir)
-      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
+      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
       return false;
     elsif ! File.writable?(dir)
-      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
+      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
       return false;
     elsif ! File.readable?(dir)
-      SyslogWrapper.instance.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
+      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
       return false;
     end
   
@@ -215,7 +215,7 @@ class Config
     if s.is_a?(Integer)
       true
     else
-      SyslogWrapper.instance.info "Error: #{settingName} must be an integer but is '#{s}'"
+      SyslogWrapper.info "Error: #{settingName} must be an integer but is '#{s}'"
       false
     end
   end
