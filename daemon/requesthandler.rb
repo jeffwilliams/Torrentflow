@@ -474,7 +474,10 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       end
     else
       begin
-        open(req.sourcePath) {|f|
+        # open-uri doesn't handle [ and ] properly
+        encodedSourcePath = URI.escape(req.sourcePath, /[\[\]]/)
+
+        open(encodedSourcePath) {|f|
           filename = File.basename(f.base_uri.path)
           resp.path = $config.torrentFileDir + "/" + filename
           File.open(resp.path, "w"){ |outfile|

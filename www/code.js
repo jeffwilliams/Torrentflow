@@ -116,8 +116,8 @@ function getTorrentsUsingAjax()
         updateTorrents();
         
       },
-      onFailure: function(){
-        setJavascriptError("Ajax error!")
+      onFailure: function(transport){
+        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
         ajaxRetrievedTorrents_g = []
         updateTorrents();
       }
@@ -151,8 +151,8 @@ function getDetailedTorrentInfo(torrentName, callback)
         }
         
       },
-      onFailure: function(){
-        setJavascriptError("Ajax error!")
+      onFailure: function(transport){
+        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
       }
     }
   );
@@ -247,8 +247,8 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
         }
         
       },
-      onFailure: function(){
-        setJavascriptError("Ajax error!")
+      onFailure: function(transport){
+        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
       }
     }
   );
@@ -290,8 +290,8 @@ function modifyTorrentsUsingAjax(torrentNameList, operation, onComplete)
           onComplete();
         }
       },
-      onFailure: function(){
-        setJavascriptError("Ajax error!")
+      onFailure: function(transport){
+        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
       }
     }
   );
