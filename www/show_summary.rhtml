@@ -1,0 +1,175 @@
+<%
+  require 'functions'
+  require 'fileutils'
+  require 'ShowNameParse'
+
+  # If this is set to false, then users don't have to login to manage torrents
+  AuthenticationEnabled = true
+
+  errorMessage = nil
+  noticeMessage = nil
+
+  ################# Handle Session ##############
+  authenticated = false
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+  if client
+    if sessionIsValid?(client, Apache.request)
+      authenticated = true
+    end
+  end
+  
+  ################# End Handle Session ##############
+%>
+
+<%
+  if ! authenticated && AuthenticationEnabled
+%>
+
+<html>
+  <head>
+    <title>Torrentflow - Login</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script language="javascript" src="prototype.js"></script>
+    <!-- <script language="javascript" src="dygraph-combined.js"></script> -->
+    <script language="javascript" src="code.js"></script>
+  </head>
+<!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
+   <body> 
+    <div id="maindiv_border">
+      <div id="maindiv">
+        <div class="logindiv">
+          <p class="logintitle">
+            RubyTorrent Login
+          </p>
+          <%
+            if errorMessage || noticeMessage
+              puts '<p class="note">'
+              if errorMessage
+                puts errorMessage 
+                puts "<br/>"
+              end
+              if noticeMessage
+                puts noticeMessage 
+                puts "<br/>"
+              end
+              puts "</p>"
+            end
+          %>
+          <form method="post" action="index.rhtml">
+            <input type="hidden" name="action" value="login"/>
+            <table class="logintable">
+              <tr>
+                <td>Login: </td><td> <input type="text" name="login" /> </td>
+              </tr>
+              <tr>
+                <td>Password: </td><td> <input type="password" name="password" /> </td>
+              </tr>
+              <tr>
+                <td></td><td><input type="submit" value="login"/></td>
+              </tr>
+            </table>
+          </form>
+          
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+<% 
+  else # if ! authenticated
+%>
+
+<html>
+  <head>
+    <title>Torrentflow</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script language="javascript" src="prototype.js"></script>
+    <script language="javascript" src="code.js"></script>
+  </head>
+<!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
+   <body onload="startTorrentsUpdates(); initOverlayTabs();"> 
+    <div id="maindiv_border">
+        <div id="maindiv">
+          <div id="title">
+            Torrentflow
+          </div>
+          <p id="javascript_error" class="collapsed">
+          </p>
+          <%
+            if errorMessage || noticeMessage
+              puts '<p class="note">'
+              if errorMessage
+                puts errorMessage 
+                puts "<br/>"
+              end
+              if noticeMessage
+                puts noticeMessage 
+                puts "<br/>"
+              end
+              puts "</p>"
+            end
+          %>
+          <div class="torrenttabletitle">
+            <span>Downloaded Shows Status</span><br>
+          </div>
+          <div class="show_summary_div">
+<%
+
+  # Examine the downloaded files and parse their show names
+
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+  if client
+    interp = ShowNameInterpreter.new
+    fileNames = getDownloadedFileNamesRecursively(client) { |f, dir|
+      interp.addName(f, FilenameMetaInfo.new.setParentDir(dir))
+    }
+    shows = interp.processNames
+    shows.keys.sort.each{ |k|
+      v = shows[k]
+      puts "<div class=\"show_div\">"
+      puts "<div class=\"show_summary_showname\">"
+      puts k + ":"
+      puts "</div>"
+      ranges = v.episodeRanges
+      season = nil
+      comma = true
+      puts "<div class=\"show_summary_list\">"
+      ranges.each{ |r|
+        if ! season || season != r.season
+          puts "<br/>" if season
+          print "  Season #{r.season}: "
+          season = r.season
+          comma = false
+        end
+        print "," if comma
+        if r.size > 1
+          print " #{r.startEpisode}-#{r.endEpisode}"
+        else
+          print " #{r.startEpisode}"
+        end
+        comma = true
+      }
+      puts "<br/>"
+      puts "</div>"
+      puts "</div>"
+    }
+  end
+  
+
+
+%>   
+          </div>
+        </div> <!-- maindiv -->
+    </div> <!-- maindiv_border -->
+  </body>
+</html>
+
+<% 
+  end # if authenticated
+%>
+
