@@ -68,6 +68,12 @@ p
   float: right;
 }
 
+#tv_show_status
+{
+  margin-left: 2em;
+  float: left;
+}
+
 tr
 {
   border-top: 0.084em solid #000000;
@@ -362,4 +368,35 @@ a
   /*border: 2px dashed #000000;*/
   position: absolute;
   width: 100%;
+}
+
+.show_summary_div
+{
+  background-color: #669966;
+  padding: 1em;
+}
+
+.show_div
+{
+  border: 0.0625em solid #000000;
+  margin: 0.125em;
+  padding: 0.125em;
+  display: inline-block;
+  /* zoom:1 and *display:inline are hacks to make IE actually display an inline-block*/
+  zoom:1;
+  *display:inline;
+  background-color: #ffffff;
+}
+
+.show_summary_showname
+{
+  clear: both;
+  font-weight: bold;
+  display: block;
+}
+
+.show_summary_list
+{
+  margin-left: 1em;
+  display: block;
 }

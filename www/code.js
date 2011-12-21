@@ -742,12 +742,9 @@ function getNodeAndSetText(id, text)
  */
 function clearTdText(td)
 {
-  var children = td.childNodes;
-  for( var n = 0; n < td.childNodes.length; n++)
+  while( td.hasChildNodes() )
   {
-    var child = td.childNodes[n];
-    td.removeChild(child);
-    n--;
+    td.removeChild(td.firstChild);
   }
 }
 

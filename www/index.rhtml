@@ -175,6 +175,15 @@
           </div>
           <div id="statusdiv">
             <div id="torrent_status">0 active torrents, 0 complete</div>
+            <%
+              doShowStatus = true
+              config = loadConfig{ |errMsg| yield errMsg }
+              if ( config && config.displayTvShowSummary )
+            %>
+            <div id="tv_show_status"><a href="show_summary.rhtml">[tv show summary]</a></div>
+            <%
+              end
+            %>
             <div id="disk_status">[]</div>
           </div>
           <p id="javascript_error" class="collapsed">

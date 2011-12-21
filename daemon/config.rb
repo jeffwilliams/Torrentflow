@@ -72,6 +72,8 @@ class Config
   attr_accessor :downloadRateLimitPerTorrent
   attr_accessor :uploadRateLimitPerTorrent
 
+  attr_accessor :displayTvShowSummary
+
   private 
   def handleYaml(yaml, dontValidateDirs = false)
     @listenPort = yaml['port'].to_i
@@ -161,7 +163,11 @@ class Config
     if @uploadRateLimitPerTorrent
       return false if ! validateInteger(@uploadRateLimitPerTorrent, 'upload_rate_limit_per_torrent')
     end
-
+  
+    @displayTvShowSummary = yaml['display_tv_show_summary']
+    if @displayTvShowSummary
+      return false if ! validateBoolean(@displayTvShowSummary, 'display_tv_show_summary')
+    end
     true
   end 
   
@@ -216,6 +222,15 @@ class Config
       true
     else
       SyslogWrapper.info "Error: #{settingName} must be an integer but is '#{s}'"
+      false
+    end
+  end
+
+  def validateBoolean(s, settingName)
+    if s.is_a?(TrueClass) || s.is_a?(FalseClass)
+      true
+    else
+      SyslogWrapper.info "Error: #{settingName} must be a boolean value (true/false) but is '#{s}'"
       false
     end
   end
