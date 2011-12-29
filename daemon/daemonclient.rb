@@ -196,6 +196,18 @@ class DaemonClient
     }
   end
 
+  # On success returns a hashtable; the key is the showname, and the value is a list 
+  #   of ShowEpisodeRange objects (having startEpisode, endEpisode, and season properties)
+  # On failure returns nil
+  def getTvShowSummary
+    req = DaemonGetTvShowSummaryRequest
+    rc = nil
+    sendAndRecv(req){ |resp|
+      rc = resp.showRanges
+    }
+    rc
+  end
+
   private
   def connect(addr, port)
     if @clientSock

@@ -12,6 +12,7 @@ require 'SyslogWrapper'
 require 'pathname'
 require 'FileInfo'
 require 'TcpStreamHandler'
+require 'ShowNameParse'
 
 class StreamMessage
   def initialize(len, io)
@@ -90,6 +91,8 @@ class RequestHandler
       handleDownloadFileRequest req
     elsif req.is_a? DaemonDelFileRequest
       handleDelFileRequest req
+    elsif req.is_a? DaemonGetTvShowSummaryRequest
+      handleGetTvShowSummaryResponse req
     else
       SyslogWrapper.info "Got an unknown request type #{req.class}"
       nil
@@ -142,6 +145,9 @@ class RequestHandler
     raise "Override this method"
   end
   def handleDelFileRequest(req)
+    raise "Override this method"
+  end
+  def handleGetTvShowSummaryResponse(req)
     raise "Override this method"
   end
 end
@@ -709,6 +715,21 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     resp
   end
 
+  def handleGetTvShowSummaryResponse(req)
+    resp = DaemonGetTvShowSummaryResponse.new
+
+    interp = ShowNameInterpreter.new
+    filesUnder($config.dataDir){ |e, dir|
+      interp.addName(e, FilenameMetaInfo.new.setParentDir(dir))
+    }
+    shows = interp.processNames
+    shows.each{ |k,v|
+      resp.showRanges[k] = v.episodeRanges
+    }
+    
+    resp
+  end
+
   private
 
   def stateToSym(state)
@@ -863,5 +884,19 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     absDataDir = Pathname.new($config.dataDir).realpath.to_s
     absRequestedFile = Pathname.new(path).realpath.to_s
     absRequestedFile =~ /^#{absDataDir}/
+  end
+
+  def filesUnder(dir)
+    Dir.new(dir).each{ |e|
+      next if e[0,1] == '.'
+      path = dir + "/" + e
+      if File.directory?(path)
+        filesUnder(path){ |f,d|
+          yield f,d
+        }
+      else
+        yield e, dir
+      end
+    }
   end
 end

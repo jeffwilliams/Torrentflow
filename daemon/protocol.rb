@@ -145,6 +145,13 @@ class DaemonDelFileRequest < DaemonRequest
   attr_reader :path
 end
 
+# Get a list of shows by parsing the filenames in 
+# the datadir
+class DaemonGetTvShowSummaryRequest < DaemonRequest
+  def initialize()
+  end
+end
+
 ####### RESPONSES ########
 class DaemonListTorrentsResponse < DaemonResponse
   def initialize
@@ -249,4 +256,18 @@ class DaemonDelFileResponse < DaemonResponse
   def initialize
     super
   end
+end
+
+# Get a list of shows by parsing the filenames in 
+# the datadir.
+# The showRanges attribute is a hashtable; the key is the 
+# showname, and the value is a list of ShowEpisodeRange objects 
+# (having startEpisode, endEpisode, and season properties)
+
+class DaemonGetTvShowSummaryResponse < DaemonRequest
+  def initialize()
+    @showRanges = {}
+  end
+  
+  attr_accessor :showRanges
 end

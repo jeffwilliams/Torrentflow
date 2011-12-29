@@ -124,6 +124,39 @@
     errorMessage = err
   }
   if client
+
+    summaryHash = client.getTvShowSummary
+
+    summaryHash.keys.sort.each{ |k|
+      ranges = shows[k]
+      puts "<div class=\"show_div\">"
+      puts "<div class=\"show_summary_showname\">"
+      puts k + ":"
+      puts "</div>"
+      puts "<div class=\"show_summary_list\">"
+      season = nil
+      comma = true
+      ranges.each{ |r|
+        if ! season || season != r.season
+          puts "<br/>" if season
+          print "  Season #{r.season}: "
+          season = r.season
+          comma = false
+        end
+        print "," if comma
+        if r.size > 1
+          print " #{r.startEpisode}-#{r.endEpisode}"
+        else
+          print " #{r.startEpisode}"
+        end
+        comma = true
+      }
+      puts "<br/>"
+      puts "</div>"
+      puts "</div>"
+      
+    }
+=begin
     interp = ShowNameInterpreter.new
     fileNames = getDownloadedFileNamesRecursively(client) { |f, dir|
       interp.addName(f, FilenameMetaInfo.new.setParentDir(dir))
@@ -158,6 +191,7 @@
       puts "</div>"
       puts "</div>"
     }
+=end
   end
   
 
