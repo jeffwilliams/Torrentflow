@@ -18,6 +18,11 @@
     if sessionIsValid?(client, Apache.request)
       authenticated = true
     end
+
+    summaryHash = client.getTvShowSummary
+    if ! summaryHash
+      errorMessage = "Loading show summary failed: #{client.errorMsg}"
+    end
   end
   
   ################# End Handle Session ##############
@@ -120,78 +125,37 @@
 
   # Examine the downloaded files and parse their show names
 
-  client = createDaemonClient{ |err|
-    errorMessage = err
-  }
   if client
-
-    summaryHash = client.getTvShowSummary
-
-    summaryHash.keys.sort.each{ |k|
-      ranges = shows[k]
-      puts "<div class=\"show_div\">"
-      puts "<div class=\"show_summary_showname\">"
-      puts k + ":"
-      puts "</div>"
-      puts "<div class=\"show_summary_list\">"
-      season = nil
-      comma = true
-      ranges.each{ |r|
-        if ! season || season != r.season
-          puts "<br/>" if season
-          print "  Season #{r.season}: "
-          season = r.season
-          comma = false
-        end
-        print "," if comma
-        if r.size > 1
-          print " #{r.startEpisode}-#{r.endEpisode}"
-        else
-          print " #{r.startEpisode}"
-        end
+    if summaryHash
+      summaryHash.keys.sort.each{ |k|
+        ranges = summaryHash[k]
+        puts "<div class=\"show_div\">"
+        puts "<div class=\"show_summary_showname\">"
+        puts k + ":"
+        puts "</div>"
+        puts "<div class=\"show_summary_list\">"
+        season = nil
         comma = true
+        ranges.each{ |r|
+          if ! season || season != r.season
+            puts "<br/>" if season
+            print "  Season #{r.season}: "
+            season = r.season
+            comma = false
+          end
+          print "," if comma
+          if r.size > 1
+            print " #{r.startEpisode}-#{r.endEpisode}"
+          else
+            print " #{r.startEpisode}"
+          end
+          comma = true
+        }
+        puts "<br/>"
+        puts "</div>"
+        puts "</div>"
       }
-      puts "<br/>"
-      puts "</div>"
-      puts "</div>"
-      
-    }
-=begin
-    interp = ShowNameInterpreter.new
-    fileNames = getDownloadedFileNamesRecursively(client) { |f, dir|
-      interp.addName(f, FilenameMetaInfo.new.setParentDir(dir))
-    }
-    shows = interp.processNames
-    shows.keys.sort.each{ |k|
-      v = shows[k]
-      puts "<div class=\"show_div\">"
-      puts "<div class=\"show_summary_showname\">"
-      puts k + ":"
-      puts "</div>"
-      ranges = v.episodeRanges
-      season = nil
-      comma = true
-      puts "<div class=\"show_summary_list\">"
-      ranges.each{ |r|
-        if ! season || season != r.season
-          puts "<br/>" if season
-          print "  Season #{r.season}: "
-          season = r.season
-          comma = false
-        end
-        print "," if comma
-        if r.size > 1
-          print " #{r.startEpisode}-#{r.endEpisode}"
-        else
-          print " #{r.startEpisode}"
-        end
-        comma = true
-      }
-      puts "<br/>"
-      puts "</div>"
-      puts "</div>"
-    }
-=end
+    end     
   end
   
 

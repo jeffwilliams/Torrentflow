@@ -29,6 +29,7 @@ class Config
   # If it's not found in the load path, the current directory and /etc/ are searched.
   # If found it returns the full path, if not it returns nil.
   def self.findConfigFile
+
     $:.reverse.each{ |e|
       path = "#{e}/#{TorrentConfigFilename}"
       return path if File.exists? path

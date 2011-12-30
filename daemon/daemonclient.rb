@@ -200,7 +200,7 @@ class DaemonClient
   #   of ShowEpisodeRange objects (having startEpisode, endEpisode, and season properties)
   # On failure returns nil
   def getTvShowSummary
-    req = DaemonGetTvShowSummaryRequest
+    req = DaemonGetTvShowSummaryRequest.new
     rc = nil
     sendAndRecv(req){ |resp|
       rc = resp.showRanges
@@ -223,14 +223,20 @@ class DaemonClient
   def sendAndRecv(req)
     rc = true
     @genericHandler.send req
-    resp = @genericHandler.recv(@readTimeout)
-    if ! resp
-      # Connection Failure! re-connect
-      connect(@addr, @port)
+    begin
+      resp = @genericHandler.recv(@readTimeout)
+      if ! resp
+        # Connection Failure! re-connect
+        connect(@addr, @port)
+        rc = false
+      else 
+        @errorMsg = resp.errorMsg
+        rc = yield(resp)
+      end
+    rescue
+      # Probably a timeout
+      @errorMsg = $!.to_s
       rc = false
-    else 
-      @errorMsg = resp.errorMsg
-      rc = yield(resp)
     end
     rc
   end

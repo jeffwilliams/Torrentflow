@@ -148,8 +148,6 @@ end
 # Get a list of shows by parsing the filenames in 
 # the datadir
 class DaemonGetTvShowSummaryRequest < DaemonRequest
-  def initialize()
-  end
 end
 
 ####### RESPONSES ########
@@ -264,7 +262,7 @@ end
 # showname, and the value is a list of ShowEpisodeRange objects 
 # (having startEpisode, endEpisode, and season properties)
 
-class DaemonGetTvShowSummaryResponse < DaemonRequest
+class DaemonGetTvShowSummaryResponse < DaemonResponse
   def initialize()
     @showRanges = {}
   end

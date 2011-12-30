@@ -282,6 +282,38 @@ class TestingRequestHandler < RequestHandler
       end
     resp
   end
+
+  def handleGetTvShowSummaryResponse(req)
+    resp = DaemonGetTvShowSummaryResponse.new
+
+    interp = ShowNameInterpreter.new
+    filesUnder($config.dataDir){ |e, dir|
+      interp.addName(e, FilenameMetaInfo.new.setParentDir(dir))
+    }
+    shows = interp.processNames
+    shows.each{ |k,v|
+      resp.showRanges[k] = v.episodeRanges
+    }
+    
+    resp
+  end
+
+  private
+  
+  def filesUnder(dir)
+    Dir.new(dir).each{ |e|
+      next if e[0,1] == '.'
+      path = dir + "/" + e
+      if File.directory?(path)
+        filesUnder(path){ |f,d|
+          yield f,d
+        }
+      else
+        yield e, dir
+      end
+    }
+  end
+  
 end
 
 
