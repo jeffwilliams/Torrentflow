@@ -64,6 +64,14 @@ class DaemonGetTorrentRequest < DaemonRequest
   
 end
 
+class DaemonGetMagnetRequest < DaemonRequest
+  def initialize(sourcePath)
+    @sourcePath = sourcePath
+  end
+
+  attr_accessor :sourcePath 
+end
+
 class DaemonTerminateRequest < DaemonRequest
 end
 
@@ -174,6 +182,12 @@ class DaemonGetTorrentResponse < DaemonResponse
   end
   
   attr_accessor :path
+end
+
+class DaemonGetMagnetResponse < DaemonResponse
+  def initialize
+    super
+  end
 end
 
 class DaemonTerminateResponse < DaemonResponse

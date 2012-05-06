@@ -87,8 +87,15 @@ namespace libtorrent {
 
     %extend {
       libtorrent::torrent_info info() {
-        return self->get_torrent_info();
+        try {
+          return self->get_torrent_info();
+        } catch (libtorrent::libtorrent_exception e) {
+          rb_raise(rb_eStandardError, "info failed: %s", e.what());
+        } catch (...) {
+          rb_raise(rb_eStandardError, "info failed");
+        }
       }
+
 
       VALUE peers() const {
         VALUE array = rb_ary_new();

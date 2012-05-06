@@ -1,9 +1,12 @@
 %{
+#include "file_storage.hpp"
 #include "libtorrent/storage.hpp"
 %}
 
 namespace libtorrent
 {
+  class file_storage;
+
   %rename("STORAGE_MODE_ALLOCATE") storage_mode_allocate;
   %rename("STORAGE_MODE_SPARSE") storage_mode_sparse;
   %rename("STORAGE_MODE_COMPACT") storage_mode_compact;
@@ -70,4 +73,10 @@ namespace libtorrent
 
 	//typedef storage_interface* (&storage_constructor_type)( boost::intrusive_ptr<torrent_info const>, fs::path const&, file_pool&);
 	typedef storage_interface* (*storage_constructor_type)( boost::intrusive_ptr<torrent_info const>, boost::filesystem::path const&, file_pool&);
+
+  struct file_pool;
+
+  storage_interface* default_storage_constructor(
+    file_storage const&, file_storage const* mapped, boost::filesystem::path const&, file_pool&);
+
 }

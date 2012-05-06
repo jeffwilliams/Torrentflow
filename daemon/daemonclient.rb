@@ -74,6 +74,18 @@ class DaemonClient
     }
   end
 
+  # Add the magnet URI to the session.
+  def getMagnet(uri)
+    req = DaemonGetMagnetRequest.new(uri)
+    sendAndRecv(req){ |resp|
+      if resp.successful
+        true
+      else
+        nil
+      end
+    }
+  end
+
   # Stop the torrent daemon. Returns true on success, or false on failure.
   def terminateDaemon
     req = DaemonTerminateRequest.new

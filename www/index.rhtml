@@ -74,6 +74,28 @@
           errorMessage = "The form submission didn't include the variable torrenturl"
         end
       end
+    elsif action == "get_magnet"
+      if client
+        url = Apache.request.paramtable['magneturl']
+        if url
+          url.untaint
+          url = url.to_s
+
+          # Use a higher timeout here
+          oldTimeout = client.readTimeout
+          client.readTimeout = 12
+
+          rc = client.getMagnet(url)
+          if ! rc
+            errorMessage = "Adding magnet URI failed"
+          else
+            noticeMessage = "Magnet added"
+          end
+
+        else
+          errorMessage = "The form submission didn't include the variable magneturl"
+        end
+      end
     elsif action == "login"
       if client
         if handleLoginRequest(client, Apache.request)
@@ -211,6 +233,15 @@
                     <form method="post" enctype="multipart/form-data" action="index.rhtml">
                       <input type="text" name="torrenturl" /> <input type="submit" value="Get file" />
                       <input type="hidden" name="action" value="download_torrent"/>
+                    </form>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Magnet URL:</td>
+                  <td>
+                    <form method="post" enctype="multipart/form-data" action="index.rhtml">
+                      <input type="text" name="magneturl" /> <input type="submit" value="Get magnet" />
+                      <input type="hidden" name="action" value="get_magnet"/>
                     </form>
                   </td>
                 </tr>

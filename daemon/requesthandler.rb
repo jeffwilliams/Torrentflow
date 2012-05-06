@@ -53,7 +53,6 @@ class RequestHandler
         end
       end
     end
-  
     if ! @done
       #SyslogWrapper.info "Client #{addr}:#{port} disconnected. Closing socket."
     end
@@ -93,6 +92,8 @@ class RequestHandler
       handleDelFileRequest req
     elsif req.is_a? DaemonGetTvShowSummaryRequest
       handleGetTvShowSummaryResponse req
+    elsif req.is_a? DaemonGetMagnetRequest
+      handleGetMagnetRequest req
     else
       SyslogWrapper.info "Got an unknown request type #{req.class}"
       nil
@@ -148,6 +149,9 @@ class RequestHandler
     raise "Override this method"
   end
   def handleGetTvShowSummaryResponse(req)
+    raise "Override this method"
+  end
+  def handleGetMagnetRequest(req)
     raise "Override this method"
   end
 end
@@ -343,6 +347,8 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     torrentHandles = @session.torrents
 
     torrentHandles.each{ |i|
+      next if ! i.valid?
+      next if ! i.has_metadata
       if req.torrentId
         next if req.torrentId != i.info.name
       end
@@ -412,6 +418,38 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     else
       resp.successful = false
       resp.errorMsg = "The torrent file doesn't exist: #{req.filepath}"
+    end
+    resp
+  end
+
+  def handleGetMagnetRequest(req)
+    begin
+      resp = DaemonGetMagnetResponse.new
+      # Add this magnet uri to the session
+      handle = Libtorrent::add_magnet_uri(@session, req.sourcePath, $config.dataDir)
+      if ! handle.valid?
+        SyslogWrapper.info "handleGetMagnetRequest: handle returned is invalid"
+        resp.successful = false
+        resp.errorMsg = "Invalid magnet link"
+      else
+        # We need to wait until metadata is downloaded before using the torrent handle.
+        Thread.new{
+          tries = 30
+          while ! handle.has_metadata && tries > 0
+            sleep 1
+            tries -= 1
+          end
+          if ! handle.has_metadata
+            SyslogWrapper.info "handleGetMagnetRequest: Could never get metadata for magnet link '#{req.sourcePath}'"
+          else
+            adjustTorrentHandle(handle, handle.info, "Magnet File")
+          end
+        }
+      end
+      SyslogWrapper.info "handleGetMagnetRequest: Add completed"
+    rescue
+      resp.successful = false
+      resp.errorMsg = $!.to_s
     end
     resp
   end
@@ -850,7 +888,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     end
   end
 
-  # Load a torrent and add it to the settion. Filename should be the basename of the torrent file.
+  # Load a torrent and add it to the session. Filename should be the basename of the torrent file.
   # Returns true on success, false if the torrent was already added. If the torrent was already 
   #   added and a block is passed, the torrent info of the existing torrent is passed to the block.
   # Probably throws exceptions also.
@@ -861,21 +899,25 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     handle = @session.find_torrent(torrentInfo.info_hash)
     if ! handle.valid? 
       handle = @session.add_torrent(torrentInfo, $config.dataDir);
-      info = RubyTorrentInfo.new
-      info.torrentFileName = filename
-      info.startGraphDataThread(handle)
-      info.startSeedingStopThread(handle)
-      @torrentInfo[torrentInfo.name] = info
-      handle.ratio = $config.ratio
-      handle.max_connections = $config.maxConnectionsPerTorrent if $config.maxConnectionsPerTorrent
-      handle.max_uploads = $config.maxUploadsPerTorrent if $config.maxUploadsPerTorrent
-      handle.download_rate_limit = $config.downloadRateLimitPerTorrent if $config.downloadRateLimitPerTorrent
-      handle.upload_rate_limit = $config.uploadRateLimitPerTorrent if $config.uploadRateLimitPerTorrent
+      adjustTorrentHandle(handle, torrentInfo, filename)
       true
     else
       yield torrentInfo if block_given?
       false
     end
+  end
+
+  def adjustTorrentHandle(handle, torrentInfo, filename)
+    info = RubyTorrentInfo.new
+    info.torrentFileName = filename
+    info.startGraphDataThread(handle)
+    info.startSeedingStopThread(handle)
+    @torrentInfo[torrentInfo.name] = info
+    handle.ratio = $config.ratio
+    handle.max_connections = $config.maxConnectionsPerTorrent if $config.maxConnectionsPerTorrent
+    handle.max_uploads = $config.maxUploadsPerTorrent if $config.maxUploadsPerTorrent
+    handle.download_rate_limit = $config.downloadRateLimitPerTorrent if $config.downloadRateLimitPerTorrent
+    handle.upload_rate_limit = $config.uploadRateLimitPerTorrent if $config.uploadRateLimitPerTorrent
   end
 
   # Returns true if the passed path is under the data dir path. That is, ensure that
