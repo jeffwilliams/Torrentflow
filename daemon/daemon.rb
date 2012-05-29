@@ -55,10 +55,15 @@ def printHelp
   puts "Options: "
   puts "  -x:             Don't become a daemon; stay in the foreground"
   puts "  -p N, --port N: Listen on port N for clients."
+  puts "  -l X, --facility X:  Syslog facility to use. Valid values are (case insensitive):"
+  puts "                LOG_AUTH, LOG_AUTHPRIV, LOG_CRON, LOG_DAEMON, LOG_FTP, LOG_KERN"
+  puts "                LOG_LOCAL0 through LOG_LOCAL7, LOG_LPR, LOG_MAIL, LOG_NEWS, LOG_SYSLOG"
+  puts "                LOG_USER (default), LOG_UUCP"
 end
 
 $optDaemonize = true
 $optPort = nil
+
 # Parse options
 def parseOptions
   opt = OptionHandler.new
@@ -75,8 +80,16 @@ def parseOptions
     val = nil
     val = opt.opts["p"].value if opt.opts.has_key?("p")
     val = opt.opts["port"].value if opt.opts.has_key?("port")
-    optPort = val.to_i if val
+    $optPort = val.to_i if val
   end
+  
+  if opt.opts.has_key?("l") || opt.opts.has_key?("facility")
+    val = nil
+    val = opt.opts["l"].value if opt.opts.has_key?("l")
+    val = opt.opts["facility"].value if opt.opts.has_key?("facility")
+    SyslogWrapper.setFacility(val) if val
+  end
+
 end
 
 $config = Config.new

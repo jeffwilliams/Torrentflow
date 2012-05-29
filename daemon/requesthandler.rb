@@ -259,6 +259,9 @@ class SeedingStopThread < TorrentHandleBackgroundThread
   def run
     Thread.new{ 
       begin
+
+        SyslogWrapper.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.info.name} "
+        @done = false
         startTime = Time.new
         while ! @done
 
@@ -266,7 +269,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
           if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
             seconds = getTimeSeeding
             if seconds && seconds  > @maxUploadSeconds
-              SyslogWrapper.info "The torrent #{@handle.info.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
+              SyslogWrapper.info "[Thread #{self.object_id}] The torrent #{@handle.info.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
               if @handle.respond_to?(:auto_managed=)
                 @handle.auto_managed = false
               else
@@ -279,8 +282,11 @@ class SeedingStopThread < TorrentHandleBackgroundThread
           sleep 10
         end
       rescue
+        SyslogWrapper.info "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.info.name}"
+        SyslogWrapper.info "[Thread #{self.object_id}] Exception: #{$!}"
         puts "Exception in seeding monitoring thread: #{$!}"
       end
+      SyslogWrapper.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.info.name} exiting."
     }
   end
 
