@@ -250,6 +250,8 @@ class GraphDataThread < TorrentHandleBackgroundThread
   end
 end
 
+# One of these objects is created per torrent, and it starts a new thread that stops
+# us from seeding after a period of time has elapsed.
 class SeedingStopThread < TorrentHandleBackgroundThread
   def initialize(handle, maxUploadSeconds)
     super(handle)
@@ -260,7 +262,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
     Thread.new{ 
       begin
 
-        SyslogWrapper.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.info.name} "
+        SyslogWrapper.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.name} "
         @done = false
         startTime = Time.new
         while ! @done
@@ -269,7 +271,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
           if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
             seconds = getTimeSeeding
             if seconds && seconds  > @maxUploadSeconds
-              SyslogWrapper.info "[Thread #{self.object_id}] The torrent #{@handle.info.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
+              SyslogWrapper.info "[Thread #{self.object_id}] The torrent #{@handle.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
               if @handle.respond_to?(:auto_managed=)
                 @handle.auto_managed = false
               else
@@ -282,11 +284,11 @@ class SeedingStopThread < TorrentHandleBackgroundThread
           sleep 10
         end
       rescue
-        SyslogWrapper.info "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.info.name}"
+        SyslogWrapper.info "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.name}"
         SyslogWrapper.info "[Thread #{self.object_id}] Exception: #{$!}"
         puts "Exception in seeding monitoring thread: #{$!}"
       end
-      SyslogWrapper.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.info.name} exiting."
+      SyslogWrapper.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.name} exiting."
     }
   end
 
@@ -300,7 +302,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
       end
     }
     if !newest
-      SyslogWrapper.info "Warning: The torrent #{@handle.info.name} is seeding, but has no files in the data dir"
+      SyslogWrapper.info "Warning: The torrent #{@handle.name} is seeding, but has no files in the data dir"
       nil
     else
       Time.new - newest
@@ -309,6 +311,58 @@ class SeedingStopThread < TorrentHandleBackgroundThread
 
 end
 
+# A class for getting temporary names that are unique with regards to the currently 
+# outstanding names.
+class TemporaryNameManager
+  def initialize(prefix)
+    @names = {}
+    @prefix = prefix
+    @nextOrd = 1
+    @freeNames = []
+  end
+
+  def newName
+    if @freeNames.size > 0
+      @freeNames.shift
+    else
+      rc = @prefix + @nextOrd.to_s
+      @nextOrd += 1
+      @names[rc] = 1
+      rc
+    end
+  end
+
+  def freeName(name)
+    if @names.has_key?(name)
+      @names.delete name
+      @freeNames.push name
+    end
+  end
+end
+
+class NullTorrentInfo
+  def creator
+    ""
+  end
+  def comment
+    ""
+  end
+  def total_size
+    0
+  end
+  def piece_length
+    0
+  end
+  def num_files
+    0
+  end
+  def valid?
+    true
+  end
+end
+
+# An implementation of RequestHandler that uses the Rasterbar libtorrent library for 
+# handling torrents.
 class RasterbarLibtorrentRequestHandler < RequestHandler
 
   def initialize(terminateRequestHandler)
@@ -344,6 +398,11 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     @globalAlerts = []
     # Alerts specific to a torrent. Indexed by torrent name
     @torrentAlerts = {}
+    # Class used to get names for Magnet links while they are downloading their metainfo
+    @magnetTempNameMgr = TemporaryNameManager.new("Magnet Link ")
+    # Empty torrent info object used when the torrent handle hasn't downloaded metadata yet but we must 
+    # display the torrent
+    @nullTorrentInfo = NullTorrentInfo.new
   end
 
   protected
@@ -352,48 +411,54 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
 
     torrentHandles = @session.torrents
 
-    torrentHandles.each{ |i|
-      next if ! i.valid?
-      next if ! i.has_metadata
+    torrentHandles.each{ |handle|
+      next if ! handle.valid?
+      handleInfo = nil
+      if handle.has_metadata
+        handleInfo = handle.info
+      else
+        handleInfo = NullTorrentInfo.new
+      end
+
       if req.torrentId
-        next if req.torrentId != i.info.name
+        next if req.torrentId != handle.name
       end
 
       info = TorrentInfo.new 
 
       req.dataToGet.each{ |d|
         if :name == d
-          info.values[:name] = i.info.name
+          info.values[:name] = handle.name
         elsif :creator == d
-          info.values[:creator] = i.info.creator
+          info.values[:creator] = handleInfo.creator
         elsif :comment == d
-          info.values[:comment] = i.info.comment
+          info.values[:comment] = handleInfo.comment
         elsif :total_size == d
-          info.values[:total_size] = Formatter.formatSize(i.info.total_size)
+          info.values[:total_size] = Formatter.formatSize(handleInfo.total_size)
         elsif :piece_size == d
-          info.values[:piece_size] = Formatter.formatSize(i.info.piece_length)
+          info.values[:piece_size] = Formatter.formatSize(handleInfo.piece_length)
         elsif :num_files == d
-          info.values[:num_files] = i.info.num_files
+          info.values[:num_files] = handleInfo.num_files
         elsif :valid == d
-          info.values[:valid] = i.info.valid?
+          info.values[:valid] = handleInfo.valid?
         elsif :state == d
-          info.values[:state] = stateToSym(i.status.state)
+          info.values[:state] = stateToSym(handle.status.state)
         elsif :paused == d
-          info.values[:paused] = (i.paused?) ? "paused" : "running"
+          info.values[:paused] = (handle.paused?) ? "paused" : "running"
         elsif :progress == d
-          info.values[:progress] = Formatter.formatPercent(i.status.progress)
+          info.values[:progress] = Formatter.formatPercent(handle.status.progress)
         elsif :num_peers == d
-          info.values[:num_peers] = i.status.num_peers
+          info.values[:num_peers] = handle.status.num_peers
         elsif :download_rate == d
-          info.values[:download_rate] = Formatter.formatSpeed(i.status.download_rate)
+          info.values[:download_rate] = Formatter.formatSpeed(handle.status.download_rate)
         elsif :upload_rate == d
-          info.values[:upload_rate] = Formatter.formatSpeed(i.status.upload_rate)
+          info.values[:upload_rate] = Formatter.formatSpeed(handle.status.upload_rate)
         elsif :estimated_time == d
-          info.values[:estimated_time] = calcEstimatedTime(i)
+          info.values[:estimated_time] = calcEstimatedTime(handle)
         elsif :upload_limit == d
-          info.values[:upload_limit] = Formatter.formatSpeed(i.upload_rate_limit)
+          info.values[:upload_limit] = Formatter.formatSpeed(handle.upload_rate_limit)
         elsif :download_limit == d
-          info.values[:download_limit] = Formatter.formatSpeed(i.download_rate_limit)
+          info.values[:download_limit] = Formatter.formatSpeed(handle.download_rate_limit)
         elsif :ratio == d
           info.values[:ratio ] = $config.ratio
         elsif :max_connections == d
@@ -432,7 +497,8 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     begin
       resp = DaemonGetMagnetResponse.new
       # Add this magnet uri to the session
-      handle = Libtorrent::add_magnet_uri(@session, req.sourcePath, $config.dataDir)
+      tempName = @magnetTempNameMgr.newName
+      handle = Libtorrent::add_magnet_uri(@session, req.sourcePath, $config.dataDir, tempName)
       if ! handle.valid?
         SyslogWrapper.info "handleGetMagnetRequest: handle returned is invalid"
         resp.successful = false
@@ -440,16 +506,18 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       else
         # We need to wait until metadata is downloaded before using the torrent handle.
         Thread.new{
-          tries = 30
+          tries = 600
           while ! handle.has_metadata && tries > 0
             sleep 1
             tries -= 1
           end
           if ! handle.has_metadata
-            SyslogWrapper.info "handleGetMagnetRequest: Could never get metadata for magnet link '#{req.sourcePath}'"
+            SyslogWrapper.info "handleGetMagnetRequest: Could never get metadata for magnet link #{tempName} ('#{req.sourcePath}'). Removing torrent."
+            @session.remove_torrent(handle, Libtorrent::Session::DELETE_FILES)
           else
             adjustTorrentHandle(handle, handle.info, "Magnet File")
           end
+          @magnetTempNameMgr.freeName(tempName)
         }
       end
       SyslogWrapper.info "handleGetMagnetRequest: Add completed"
@@ -468,8 +536,8 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       resp.errorMsg = "No such torrent"
       return resp
     end
-    if i.info.name == req.torrentName
-      torrentName = i.info.name
+    if i.name == req.torrentName
+      torrentName = i.name
       if req.deleteFiles
         @session.remove_torrent(i, Libtorrent::Session::DELETE_FILES)
       else
@@ -584,6 +652,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     resp = DaemonPauseTorrentResponse.new
     handle = findTorrentHandle(req.torrentName)
     return resp if ! handle
+
     if handle.paused?
       if handle.respond_to?(:auto_managed=)
         handle.auto_managed = true
@@ -803,7 +872,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def calcEstimatedTime(torrentHandle)
     # Time left = amount_left / download_rate
     #           = total_size * (1-progress) / download_rate
-    if torrentHandle.status.download_rate.to_f > 0
+    if torrentHandle.has_metadata && torrentHandle.status.download_rate.to_f > 0
       secondsLeft = torrentHandle.info.total_size.to_f * (1 - torrentHandle.status.progress.to_f) / torrentHandle.status.download_rate.to_f
       Formatter.formatTime(secondsLeft)
     else
@@ -814,7 +883,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def findTorrentHandle(torrentName)
     torrentHandles = @session.torrents
     torrentHandles.each{ |i|
-      if i.info.name == torrentName
+      if i.name == torrentName
         return i
       end
     }
@@ -828,7 +897,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def processNewAlerts
     @session.alerts.each{ |alert|
       if alert.is_a? Libtorrent::TorrentAlert
-       addToHashList @torrentAlerts, alert.handle.info.name, alert
+       addToHashList @torrentAlerts, alert.handle.name, alert
       else
         @globalAlerts.push alert
         # For now since nothing is reading the alerts, just store a max of 
