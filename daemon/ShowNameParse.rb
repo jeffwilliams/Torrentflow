@@ -5,6 +5,7 @@
 
 Directory = "/mnt/twotb/movies/"
 
+# Information that uniquely identifies an episode of a show.
 class ShowEpisode
   def initialize
     @season = nil
@@ -19,6 +20,8 @@ class ShowEpisode
   end
 end
 
+# This class represents a contiguous range of episodes of a show in a single season. For example
+# Season 1 Episodes 1-5, or Season 2 Episodes 7-9
 class ShowEpisodeRange
   def initialize(season, startEpisode, endEpisode)
     @season = season
@@ -34,6 +37,8 @@ class ShowEpisodeRange
     @endEpisode - @startEpisode + 1
   end
 
+  # Given a list of ShowEpisode objects, return an array of ShowEpisodeRange objects
+  # that represents the passed episodes.
   def self.createRanges(episodes)
     ranges = []
     sorted = episodes.sort{ |a,b|
@@ -49,12 +54,10 @@ class ShowEpisodeRange
     firstInRange = nil
     lastProcessed = nil
     sorted.each{ |s|
-#puts s.to_s
       if ! firstInRange
         firstInRange = s
       else
         if s.season != lastProcessed.season || s.episode > lastProcessed.episode + 1
-#puts "end of range"
           # End of range!
           ranges.push ShowEpisodeRange.new(firstInRange.season, firstInRange.episode, lastProcessed.episode)
           firstInRange = s
@@ -70,6 +73,7 @@ class ShowEpisodeRange
  
 end
 
+# An object that stores a list of episode ranges for a single show.
 class ShowEpisodes
   def initialize
     @showName = nil
@@ -101,12 +105,15 @@ class ParsedShowName
     rc
   end
 
-  # Returns an array of ParsedShowName objects
+  # Given a single episode raw string (as from a filename) in rawName, and given some metaInfo 
+  # (such as the file's parent directory) returns an array of ParsedShowName objects  representing 
+  # the episodes found in the string.
+  #
+  #   Format 1: Show.Name.S01E01.whatever.avi
+  #   Format 2: Show.Name.S01E01E02.whatever.avi
   def self.parse(rawName, metaInfo)
     rc = []
 
-    # Format 1: Show.Name.S01E01.whatever.avi
-    # Format 2: Show.Name.S01E01E02.whatever.avi
 
     if rawName =~ /^(.*)[sS](\d+)((?:[eE]\d+)+)/
       showName = self.fixShowName($1, metaInfo)
@@ -164,6 +171,7 @@ class FilenameMetaInfo
   end
 end
 
+# A class that can be used to parse a series of show names into an array of ShowEpisodes objects. 
 class ShowNameInterpreter
   def initialize
     @names = []
@@ -175,6 +183,7 @@ class ShowNameInterpreter
     @metaInfo.push metaInfo
   end
   
+  # Process the episode names added with addName and return an array of ShowEpisodes objects.
   def processNames
     shows = {}
     i = 0

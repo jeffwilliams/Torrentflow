@@ -53,6 +53,7 @@ def printHelp
   puts "The torrentflow daemon."
   puts ""
   puts "Options: "
+  puts "  -h, --help:     Show this help"
   puts "  -x:             Don't become a daemon; stay in the foreground"
   puts "  -p N, --port N: Listen on port N for clients."
   puts "  -l X, --facility X:  Syslog facility to use. Valid values are (case insensitive):"
@@ -108,12 +109,11 @@ def parseConfig
   end
 end
 
-# Load config file:
-#   Storage directory
-#   TCP Port to listen for start/stop clients
+# Parse options and load config file.
 parseOptions
 parseConfig
 
+# If the user specified a port as an option, override the config file setting.
 if $optPort
   $config.listenPort = $optPort
 end

@@ -25,6 +25,8 @@ class Authentication
     attr_accessor :expiry
   end
 
+  # Create an Authentication object. This initializer creates a thread that 
+  # periodically checks for expired sessions and removes them.
   def initialize
     @accounts = {}
     @sessions = {}

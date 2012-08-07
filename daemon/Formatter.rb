@@ -1,4 +1,5 @@
-
+# Class that can be used to format different quantities into 
+# human readable strings.
 class Formatter
   Kb = 1024
   Meg = 1024*Kb
