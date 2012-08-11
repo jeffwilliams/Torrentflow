@@ -13,6 +13,7 @@ require 'pathname'
 require 'FileInfo'
 require 'TcpStreamHandler'
 require 'ShowNameParse'
+require 'UsageTracker'
 
 class StreamMessage
   def initialize(len, io)
@@ -94,6 +95,8 @@ class RequestHandler
       handleGetTvShowSummaryResponse req
     elsif req.is_a? DaemonGetMagnetRequest
       handleGetMagnetRequest req
+    elsif req.is_a? DaemonGetUsageRequest
+      handleGetUsageRequest req
     else
       SyslogWrapper.info "Got an unknown request type #{req.class}"
       nil
@@ -199,10 +202,35 @@ class RubyTorrentInfo
   end
 end
 
-class TorrentHandleBackgroundThread
+class BackgroundThread
   def initialize(handle)  
-    @handle = handle
     @done = false
+  end
+
+  def run
+    Thread.new{ 
+      begin
+        work
+      rescue
+        SyslogWrapper.info "[Thread #{self.object_id}] Caught an unhandled exception in #{self.class.name} thread: #{$!}"
+      end
+      SyslogWrapper.info "[Thread #{self.object_id}] Thread terminating"
+    }
+  end 
+
+  def kill
+    @done = true
+  end
+
+  private
+  def work
+  end
+end
+
+class TorrentHandleBackgroundThread < BackgroundThread
+  def initialize(handle)
+    @handle = handle
+    super
   end
 
   attr_accessor :handle
@@ -211,10 +239,6 @@ class TorrentHandleBackgroundThread
     (@handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING_METADATA ||
       @handle.status.state == Libtorrent::TorrentStatus::DOWNLOADING) &&
       ! @handle.paused?
-  end
-
-  def kill
-    @done = true
   end
 end
 
@@ -229,24 +253,22 @@ class GraphDataThread < TorrentHandleBackgroundThread
   
   attr_reader :timeSampleHolderMutex
   
-  def run
-    Thread.new{ 
-      begin
-        startTime = Time.new
-        while ! @done
-  
-          # Only add the sample if the torrent is running
-          if torrentIsRunning
-            @timeSampleHolderMutex.synchronize{
-              @timeSampleHolder.addSample DataPoint.new( (Time.new - startTime) / 60, (@handle.status.download_rate.to_f/1024))
-            }
-          end
-          sleep 5
+  def work
+    begin
+      startTime = Time.new
+      while ! @done
+
+        # Only add the sample if the torrent is running
+        if torrentIsRunning
+          @timeSampleHolderMutex.synchronize{
+            @timeSampleHolder.addSample DataPoint.new( (Time.new - startTime) / 60, (@handle.status.download_rate.to_f/1024))
+          }
         end
-      rescue
-        puts "Exception in graph data thread: #{$!}"
-      end    
-    }
+        sleep 5
+      end
+    rescue
+      SyslogWrapper.info "Exception in graph data thread: #{$!}"
+    end    
   end
 end
 
@@ -258,38 +280,36 @@ class SeedingStopThread < TorrentHandleBackgroundThread
     @maxUploadSeconds = maxUploadSeconds
   end
   
-  def run
-    Thread.new{ 
-      begin
+  def work
+    begin
 
-        SyslogWrapper.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.name} "
-        @done = false
-        startTime = Time.new
-        while ! @done
+      SyslogWrapper.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.name} "
+      @done = false
+      startTime = Time.new
+      while ! @done
 
-          # Only add the sample if the torrent is running
-          if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
-            seconds = getTimeSeeding
-            if seconds && seconds  > @maxUploadSeconds
-              SyslogWrapper.info "[Thread #{self.object_id}] The torrent #{@handle.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
-              if @handle.respond_to?(:auto_managed=)
-                @handle.auto_managed = false
-              else
-                SyslogWrapper.info "Can't un-auto-manage torrent since the version of libtorrent is too old"
-              end
-              @handle.pause
-              @done = true
+        # Only add the sample if the torrent is running
+        if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
+          seconds = getTimeSeeding
+          if seconds && seconds  > @maxUploadSeconds
+            SyslogWrapper.info "[Thread #{self.object_id}] The torrent #{@handle.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
+            if @handle.respond_to?(:auto_managed=)
+              @handle.auto_managed = false
+            else
+              SyslogWrapper.info "Can't un-auto-manage torrent since the version of libtorrent is too old"
             end
+            @handle.pause
+            @done = true
           end
-          sleep 10
         end
-      rescue
-        SyslogWrapper.info "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.name}"
-        SyslogWrapper.info "[Thread #{self.object_id}] Exception: #{$!}"
-        puts "Exception in seeding monitoring thread: #{$!}"
+        sleep 10
       end
-      SyslogWrapper.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.name} exiting."
-    }
+    rescue
+      SyslogWrapper.info "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.name}"
+      SyslogWrapper.info "[Thread #{self.object_id}] Exception: #{$!}"
+      puts "Exception in seeding monitoring thread: #{$!}"
+    end
+    SyslogWrapper.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.name} exiting."
   end
 
   def getTimeSeeding
@@ -309,6 +329,42 @@ class SeedingStopThread < TorrentHandleBackgroundThread
     end
   end
 
+end
+
+class UsageTrackingBackgroundThread < BackgroundThread
+  def initialize(session)
+    @session = session
+    resetDay = $config.usageMonthlyResetDay
+    if ! resetDay
+      SyslogWrapper.info "Usage tracking is enabled, but the monthly reset day was not specified. Defaulting to the 1st of the month."
+      resetDay = 1
+    end
+    @usageTracker = UsageTracker.new(resetDay)
+    @mutex = Mutex.new
+    super
+  end
+  
+  attr_accessor :mutex
+
+  def work
+    SyslogWrapper.info "Starting the usage tracking thread."
+    while
+      begin
+        @mutex.synchronize {
+          @usageTracker.update(@session.status.total_download + @session.status.total_upload)
+        }
+        sleep 60
+      rescue
+        SyslogWrapper.info "Usage tracking thread got an exception: #{$!}."
+      end
+    end
+  end
+
+  def withUsageTracker
+    @mutex.synchronize do
+      yield @usageTracker
+    end
+  end
 end
 
 # A class for getting temporary names that are unique with regards to the currently 
@@ -403,6 +459,12 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     # Empty torrent info object used when the torrent handle hasn't downloaded metadata yet but we must 
     # display the torrent
     @nullTorrentInfo = NullTorrentInfo.new
+
+    @usageTrackingThread = nil
+    if $config.enableUsageTracking
+      @usageTrackingThread = UsageTrackingBackgroundThread.new(@session)
+      @usageTrackingThread.run 
+    end
   end
 
   protected
@@ -840,6 +902,38 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       resp.showRanges[k] = v.episodeRanges
     }
     
+    resp
+  end
+
+  def handleGetUsageRequest(req)
+    resp = DaemonGetUsageResponse.new
+    if ! $config.enableUsageTracking
+      resp.successful = false
+      resp.errorMsg = "Usage tracking is not enabled."
+    elsif ! @usageTrackingThread
+      resp.successful = false
+      resp.errorMsg = "Usage tracking is enabled, but the usage tracking thread is not running. Check the log for errors."
+    elsif req.type != :daily && req.type != :monthly
+      resp.successful = false
+      resp.errorMsg = "Unsupported usage tracking period type #{req.type}"
+    elsif req.qty != :current && req.qty != :all
+      resp.successful = false
+      resp.errorMsg = "Unsupported usage tracking quantity #{req.qty}"
+    else
+      @usageTrackingThread.withUsageTracker do |tracker|
+        # Build an array of hashes to return
+        buckets = nil
+        if req.qty == :current
+          buckets = [tracker.currentUsage(req.type)]
+        else
+          buckets = tracker.allUsage(req.type)
+            #new.value = Formatter.formatSize(new.value)
+        end
+        resp.buckets = buckets.collect do |bucket|
+          {"label" => bucket.label, "value" => Formatter.formatSize(bucket.value)}
+        end
+      end
+    end
     resp
   end
 

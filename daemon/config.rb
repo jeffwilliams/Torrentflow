@@ -73,7 +73,14 @@ class Config
   attr_accessor :downloadRateLimitPerTorrent
   attr_accessor :uploadRateLimitPerTorrent
 
+  # Whether or not to enable the TV show summary in the UI
   attr_accessor :displayTvShowSummary
+
+  # Usage tracking parameters
+  attr_accessor :usageMonthlyResetDay
+  attr_accessor :enableUsageTracking
+  attr_accessor :dailyLimit
+  attr_accessor :monthlyLimit
 
   private 
   def handleYaml(yaml, dontValidateDirs = false)
@@ -169,6 +176,27 @@ class Config
     if @displayTvShowSummary
       return false if ! validateBoolean(@displayTvShowSummary, 'display_tv_show_summary')
     end
+
+    @enableUsageTracking = yaml['enable_usage_tracking']
+    if @enableUsageTracking
+      return false if ! validateBoolean(@enableUsageTracking, 'enable_usage_tracking')
+    end
+
+    @usageMonthlyResetDay = yaml['usage_monthly_reset_day']
+    if @usageMonthlyResetDay
+      return false if ! validateInteger(@usageMonthlyResetDay, 'usage_monthly_reset_day')
+    end
+
+    @dailyLimit = yaml['daily_limit']
+    if @dailyLimit
+      return false if ! validateInteger(@dailyLimit, 'daily_limit')
+    end
+
+    @monthlyLimit = yaml['monthly_limit']
+    if @monthlyLimit
+      return false if ! validateInteger(@monthlyLimit, 'monthly_limit')
+    end
+
     true
   end 
   

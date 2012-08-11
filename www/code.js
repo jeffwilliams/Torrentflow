@@ -220,6 +220,36 @@ function getFsInfo(callbackSuccess, callbackError)
   );
 }
 
+function getUsageInfo(callbackSuccess, callbackError)
+{
+  params = {'qty' : 'current'}
+
+  new Ajax.Request('get_usage.rhtml',
+    {
+      method: 'get',
+      parameters: params,
+      onSuccess: function(transport){
+        var para = document.getElementById("javascript_error");
+        // Parse the JSON response 
+        resp = transport.responseText.evalJSON();
+        successful = resp.shift();
+
+        if (successful == "success")
+        {
+          callbackSuccess(resp);
+        }
+        else
+        { 
+          callbackError(successful);
+        }
+        
+      },
+      onFailure: function(){
+      }
+    }
+  );
+}
+
 function getFilesUsingAjax(dir, callbackSuccess, callbackError)
 {
   params = {};
@@ -1104,6 +1134,7 @@ function updateStatusLine()
   setNodeText(elem, active + " active torrents, " + complete + " complete"); 
   
   getFsInfo(appendFsInfoToStatusLine, setFsInfoErrorToStatusLine);
+  getUsageInfo(appendUsageInfoToStatusLine, setUsageInfoErrorToStatusLine);
 }
 
 function appendFsInfoToStatusLine(fsInfo)
@@ -1120,6 +1151,24 @@ function appendFsInfoToStatusLine(fsInfo)
 function setFsInfoErrorToStatusLine(error)
 {
   var elem = document.getElementById("disk_status");
+  //setNodeText(elem, error)
+  setNodeText(elem, [])
+}
+
+function appendUsageInfoToStatusLine(usageInfo)
+{
+  var elem = document.getElementById("usage_status");
+
+  var str = " [" + usageInfo[0].value + " today"
+  str = str + ", " + usageInfo[1].value + " this month"
+  str = str + "]"
+  setNodeText(elem, str)
+}
+
+function setUsageInfoErrorToStatusLine(error)
+{
+  var elem = document.getElementById("usage_status");
+  console.log("Get usage error: " + error);
   //setNodeText(elem, error)
   setNodeText(elem, [])
 }

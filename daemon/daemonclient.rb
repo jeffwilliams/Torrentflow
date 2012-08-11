@@ -220,6 +220,19 @@ class DaemonClient
     rc
   end
 
+  # Get the usage (volume of bytes) that have been uploaded and downloaded for different periods (today, this month, etc)
+  # type should be one of :daily or :monthly, and qty should be :current or :all
+  # On success returns an array of Bucket objects. 
+  # On failure returns nil.
+  def getUsage(type, qty)
+    req = DaemonGetUsageRequest.new(type, qty)
+    rc = nil
+    sendAndRecv(req){ |resp|
+      rc = resp.buckets
+    }
+    rc
+  end
+
   private
   def connect(addr, port)
     if @clientSock

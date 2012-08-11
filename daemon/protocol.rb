@@ -158,6 +158,17 @@ end
 class DaemonGetTvShowSummaryRequest < DaemonRequest
 end
 
+# Get the usage (volume of bytes) that have been uploaded and downloaded for different periods (today, this month, etc)
+class DaemonGetUsageRequest < DaemonRequest
+  def initialize(type, qty)
+    @type = type
+    @qty = qty
+  end
+
+  attr_accessor :type
+  attr_accessor :qty
+end
+
 ####### RESPONSES ########
 class DaemonListTorrentsResponse < DaemonResponse
   def initialize
@@ -282,4 +293,14 @@ class DaemonGetTvShowSummaryResponse < DaemonResponse
   end
   
   attr_accessor :showRanges
+end
+
+# Get the usage (volume of bytes) that have been uploaded and downloaded for different periods (today, this month, etc)
+class DaemonGetUsageResponse < DaemonResponse
+  
+  def initialize(buckets = nil)
+    @buckets = buckets
+  end
+
+  attr_accessor :buckets
 end

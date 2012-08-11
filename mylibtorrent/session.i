@@ -31,6 +31,8 @@ namespace libtorrent
     void set_alert_mask(int m);
 #endif
 
+    libtorrent::session_status status() const;
+
     void remove_torrent(const torrent_handle& h, int options = none);
     torrent_handle find_torrent(sha1_hash const& info_hash) const;
 
@@ -44,17 +46,17 @@ namespace libtorrent
     %extend {
       torrent_handle add_torrent(
         torrent_info& ti,
-        const char* save_path,
-        entry const& resume_data = entry(),
-        storage_mode_t storage_mode = storage_mode_sparse,
-        bool paused = false
+        const char* save_path
       )
       {
-        boost::intrusive_ptr<libtorrent::torrent_info> intrusive_ti(new libtorrent::torrent_info(ti));
-        // Memory leak
-        //boost::filesystem::path* my_path = new boost::filesystem::path(save_path);
-        boost::filesystem::path my_path(save_path);
-        return self->add_torrent( intrusive_ti, my_path, resume_data, storage_mode, paused);
+        libtorrent::add_torrent_params params;
+        params.ti = boost::intrusive_ptr<libtorrent::torrent_info>(new libtorrent::torrent_info(ti));
+        params.save_path = save_path;
+        try {
+          return self->add_torrent( params );
+        } catch (libtorrent::libtorrent_exception e) {
+          rb_raise(rb_eStandardError, "add_torrent failed: %s", e.what());
+        }
       }
         
       VALUE torrents() {

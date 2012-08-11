@@ -206,6 +206,9 @@
             <%
               end
             %>
+            <% if ( config && config.enableUsageTracking ) %>
+            <div id="usage_status">[]</div>
+            <% end %>
             <div id="disk_status">[]</div>
           </div>
           <p id="javascript_error" class="collapsed">

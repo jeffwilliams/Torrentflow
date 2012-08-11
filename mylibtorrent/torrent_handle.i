@@ -25,6 +25,8 @@ namespace libtorrent {
     void replace_trackers(std::vector<announce_entry> const&) const;
     void add_url_seed(std::string const& url);
 
+    std::string name() const;
+
     bool has_metadata() const;
 
     %rename("valid?") is_valid() const;

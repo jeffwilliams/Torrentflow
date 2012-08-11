@@ -22,4 +22,5 @@ namespace libtorrent {
 %include "alert.i"
 %include "session_settings.i"
 %include "session.i"
+%include "session_status.i"
 %include "magnet_uri.i"
