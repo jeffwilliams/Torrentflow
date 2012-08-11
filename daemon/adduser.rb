@@ -2,11 +2,11 @@
 require 'config'
 require 'Authentication'
 
-$config = Config.new
+$config = TorrentflowConfig.new
 def parseConfig
   
   # Find config file
-  configPath = Config.findConfigFile
+  configPath = TorrentflowConfig.findConfigFile
 
   if ! configPath
     puts "Error: unable to find configuration file."

@@ -15,6 +15,15 @@ require 'TcpStreamHandler'
 require 'ShowNameParse'
 require 'UsageTracker'
 
+# Load Mongo if it's installed. 
+$haveMongo = true
+begin
+  require 'rubygems'
+  require 'mongo'
+rescue LoadError
+  $haveMongo = false
+end
+
 class StreamMessage
   def initialize(len, io)
     @io = io
@@ -203,7 +212,7 @@ class RubyTorrentInfo
 end
 
 class BackgroundThread
-  def initialize(handle)  
+  def initialize
     @done = false
   end
 
@@ -332,16 +341,20 @@ class SeedingStopThread < TorrentHandleBackgroundThread
 end
 
 class UsageTrackingBackgroundThread < BackgroundThread
-  def initialize(session)
+  def initialize(session, mongoDb)
     @session = session
     resetDay = $config.usageMonthlyResetDay
     if ! resetDay
       SyslogWrapper.info "Usage tracking is enabled, but the monthly reset day was not specified. Defaulting to the 1st of the month."
       resetDay = 1
     end
-    @usageTracker = UsageTracker.new(resetDay)
+    if ! mongoDb
+      SyslogWrapper.info "No Mongo connection; tracked usage won't be persistent across torrentflow restarts."
+      SyslogWrapper.info "This means a restart will cause limit enforcement to fail."
+    end
+    @usageTracker = UsageTracker.new(resetDay, mongoDb)
     @mutex = Mutex.new
-    super
+    super()
   end
   
   attr_accessor :mutex
@@ -353,10 +366,10 @@ class UsageTrackingBackgroundThread < BackgroundThread
         @mutex.synchronize {
           @usageTracker.update(@session.status.total_download + @session.status.total_upload)
         }
-        sleep 60
       rescue
         SyslogWrapper.info "Usage tracking thread got an exception: #{$!}."
       end
+      sleep 60
     end
   end
 
@@ -460,9 +473,29 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     # display the torrent
     @nullTorrentInfo = NullTorrentInfo.new
 
+    # Connect to Mongo if it's available
+    if $haveMongo && $config.mongoDb
+      SyslogWrapper.info "Connecting to mongo"
+      # Connection.new accepts nil arguments for host and port
+      begin
+        @mongoConnection = Mongo::Connection.new($config.mongoHost, $config.mongoPort)
+        @mongoDb = @mongoConnection.db($config.mongoDb)
+        if $config.mongoUser
+          if ! @mongoDb.authenticate($config.mongoUser, $config.mongoPass)
+            SyslogWrapper.info "Authenticating to Mongo failed: #{$!}"
+            @mongoConnection = nil
+            @mongoDb = nil
+          end
+        end
+      rescue
+        SyslogWrapper.info "Connecting to Mongo failed: #{$!}"
+        @mongoConnection = nil
+      end
+    end
+
     @usageTrackingThread = nil
     if $config.enableUsageTracking
-      @usageTrackingThread = UsageTrackingBackgroundThread.new(@session)
+      @usageTrackingThread = UsageTrackingBackgroundThread.new(@session, @mongoDb)
       @usageTrackingThread.run 
     end
   end

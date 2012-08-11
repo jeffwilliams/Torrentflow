@@ -13,8 +13,14 @@ class Bucket
   # The amount of usage for this bucket alone
   attr_accessor :value
 
-  def clone
-    Bucket.new(@label.clone, @criteriaData.clone, @value)
+  def toHash
+    {"label" => @label, "absoluteUsageAtStartOfBucket" => @absoluteUsageAtStartOfBucket, "criteriaData" => @criteriaData, "value" => @value}
+  end
+  def fromHash(hash)
+    @label = hash["label"]
+    @absoluteUsageAtStartOfBucket = hash["absoluteUsageAtStartOfBucket"]
+    @criteriaData = hash["criteriaData"]
+    @value = hash["value"]
   end
 end
 
@@ -75,6 +81,24 @@ class PeriodicBuckets
     @buckets
   end
 
+  def toHash
+    array = []
+    @buckets.each do |b|
+      array.push b.toHash 
+    end
+    { "buckets" => array }
+  end
+
+  def fromHash(hash)
+    @buckets = []
+    hash["buckets"].each do |b|
+      bucket = Bucket.new(nil, nil, nil)
+      bucket.fromHash b
+      @buckets.push bucket
+      #bucket.criteriaData = @bucketChangeCriteria.criteriaData
+    end
+  end
+
   private
   def setAbsoluteUsage(previousBucket, newBucket, absoluteUsage)
     if previousBucket
@@ -100,6 +124,10 @@ class DailyBucketChangeCriteria < BucketChangeCriteria
     now = Time.new
     Bucket.new(now.strftime("%b %e"), now, 0)
   end
+
+  def criteriaData
+    now = Time.new
+  end
 end
 
 class MonthlyBucketChangeCriteria < BucketChangeCriteria
@@ -114,9 +142,14 @@ class MonthlyBucketChangeCriteria < BucketChangeCriteria
   def newBucket
     now = Time.new
     # Set the bucket's criteriaData to the date after which we need a new bucket.
-    nextMonth = now.mon % 12 + 1
-    data = Time.local(now.year, nextMonth, @resetDay)
+    data = criteriaData
     Bucket.new(now.strftime("%b %Y"), data, 0)
+  end
+
+  def criteriaData
+    now = Time.new
+    nextMonth = now.mon % 12 + 1
+    Time.local(now.year, nextMonth, @resetDay)
   end
 end
 
@@ -135,17 +168,24 @@ class MinuteBucketChangeCriteria < BucketChangeCriteria
 end
 
 class UsageTracker
-  def initialize(monthlyResetDay)
+  def initialize(monthlyResetDay, mongoDb = nil)
     @buckets = {}
     @buckets[:daily] = PeriodicBuckets.new(DailyBucketChangeCriteria.new,31)
     #@buckets[:minute] = PeriodicBuckets.new(MinuteBucketChangeCriteria.new,3)
     @buckets[:monthly] = PeriodicBuckets.new(MonthlyBucketChangeCriteria.new(monthlyResetDay),2)
+    @mongoDb = mongoDb
+    @usageForAllTimeAdjustment = 0
+    loadBucketsFromMongo
   end
 
+  attr_accessor :mongoDb
+
   def update(usageForAllTime)
+    usageForAllTime += @usageForAllTimeAdjustment
     @buckets.each do |k,buckets|
       buckets.update usageForAllTime
     end
+    saveBucketsToMongo
   end
 
   # Returns the usage as of the last time update() was called.
@@ -164,6 +204,36 @@ class UsageTracker
     buckets = @buckets[type]
     raise "Unsupported periodType #{periodType.to_s}" if ! buckets
     buckets
+  end
+
+  def saveBucketsToMongo
+    if @mongoDb
+      dailyCollection = @mongoDb.collection("daily_usage")
+      monthlyCollection = @mongoDb.collection("monthly_usage")
+      # Remove all previous documents
+      dailyCollection.remove
+      monthlyCollection.remove
+
+      dailyCollection.insert @buckets[:daily].toHash
+      monthlyCollection.insert @buckets[:monthly].toHash
+    end
+  end
+
+  def loadBucketsFromMongo
+    if @mongoDb
+      dailyCollection = @mongoDb.collection("daily_usage")
+      monthlyCollection = @mongoDb.collection("monthly_usage")
+
+      arr = dailyCollection.find_one
+      @buckets[:daily].fromHash arr if arr
+      arr = monthlyCollection.find_one
+      @buckets[:monthly].fromHash arr if arr
+
+      # If we are loading from Mongo it means that the absolute usage returned from the torrentflow session will not
+      # contain the usage that we previously tracked, so we must add the old tracked value to what the torrentflow
+      # session reports.
+      @usageForAllTimeAdjustment = @buckets[:daily].current.absoluteUsageAtStartOfBucket + @buckets[:daily].current.value
+    end
   end
 end
 

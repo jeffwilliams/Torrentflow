@@ -35,9 +35,9 @@ end
 client = nil
 begin
   port = 3000
-  configFile = Config.findConfigFile
+  configFile = TorrentflowConfig.findConfigFile
   if configFile
-    config = Config.new
+    config = TorrentflowConfig.new
     if config.load(configFile, true)
       port = config.listenPort
     else

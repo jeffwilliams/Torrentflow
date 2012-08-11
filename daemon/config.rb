@@ -1,7 +1,7 @@
 require 'yaml'
 require 'SyslogWrapper'
 
-class Config
+class TorrentflowConfig
   TorrentConfigFilename = "torrentflowdaemon.conf"
 
   def initialize
@@ -81,6 +81,13 @@ class Config
   attr_accessor :enableUsageTracking
   attr_accessor :dailyLimit
   attr_accessor :monthlyLimit
+
+  # Mongo connection information
+  attr_accessor :mongoDb
+  attr_accessor :mongoUser
+  attr_accessor :mongoPass
+  attr_accessor :mongoHost
+  attr_accessor :mongoPort
 
   private 
   def handleYaml(yaml, dontValidateDirs = false)
@@ -195,6 +202,15 @@ class Config
     @monthlyLimit = yaml['monthly_limit']
     if @monthlyLimit
       return false if ! validateInteger(@monthlyLimit, 'monthly_limit')
+    end
+
+    @mongoDb = yaml['mongo_db']
+    @mongoUser = yaml['mongo_user']
+    @mongoPass = yaml['mongo_pass']
+    @mongoHost = yaml['mongo_host']
+    @mongoPort = yaml['mongo_port']
+    if @mongoPort
+      return false if ! validateInteger(@mongoPort, 'monthly_port')
     end
 
     true

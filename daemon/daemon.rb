@@ -93,14 +93,14 @@ def parseOptions
 
 end
 
-$config = Config.new
+$config = TorrentflowConfig.new
 def parseConfig
   configPath = nil
   
   # Find config file
-  configPath = Config::findConfigFile
+  configPath = TorrentflowConfig::findConfigFile
   if ! configPath
-    SyslogWrapper.info "Error: Can't locate config file #{Config::TorrentConfigFilename} in the current dir or in /etc."
+    SyslogWrapper.info "Error: Can't locate config file #{TorrentflowConfig::TorrentConfigFilename} in the current dir or in /etc."
     exit 1
   end
 
