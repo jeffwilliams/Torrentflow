@@ -239,7 +239,7 @@ end
 class TorrentHandleBackgroundThread < BackgroundThread
   def initialize(handle)
     @handle = handle
-    super
+    super()
   end
 
   attr_accessor :handle
@@ -369,7 +369,7 @@ class UsageTrackingBackgroundThread < BackgroundThread
       rescue
         SyslogWrapper.info "Usage tracking thread got an exception: #{$!}."
       end
-      sleep 60
+      sleep 10
     end
   end
 
@@ -458,7 +458,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         begin
           loadAndAddTorrent(path, file)
         rescue
-          SyslogWrapper.info "Failed to load #{path}: it is not a valid torrent"
+          SyslogWrapper.info "Failed to load #{path}: it is not a valid torrent: #{$!}"
         end
       end
     }
@@ -1095,17 +1095,22 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   #   added and a block is passed, the torrent info of the existing torrent is passed to the block.
   # Probably throws exceptions also.
   def loadAndAddTorrent(path, filename)
-    torrentInfo = Libtorrent::TorrentInfo::load(path)
-    # Make sure the torrent doesn't already exist in the session or libtorrent
-    # will abort()
-    handle = @session.find_torrent(torrentInfo.info_hash)
-    if ! handle.valid? 
-      handle = @session.add_torrent(torrentInfo, $config.dataDir);
-      adjustTorrentHandle(handle, torrentInfo, filename)
-      true
-    else
-      yield torrentInfo if block_given?
-      false
+    begin
+      torrentInfo = Libtorrent::TorrentInfo::load(path)
+      # Make sure the torrent doesn't already exist in the session or libtorrent
+      # will abort()
+      handle = @session.find_torrent(torrentInfo.info_hash)
+      if ! handle.valid? 
+        handle = @session.add_torrent(torrentInfo, $config.dataDir);
+        adjustTorrentHandle(handle, torrentInfo, filename)
+        true
+      else
+        yield torrentInfo if block_given?
+        false
+      end
+    rescue
+      SyslogWrapper.info("loadAndAddTorrent: Exception adding torrent: #{$!}")
+      raise $!
     end
   end
 
