@@ -8,9 +8,9 @@ SidCookieName = "rubytorrent_sid"
 # If there is an error loading the config file, it is yielded if a block was passed
 def loadConfig
   config = nil
-  configFile = Config.findConfigFile 
+  configFile = TorrentflowConfig.findConfigFile 
   if configFile
-    config = Config.new
+    config = TorrentflowConfig.new
     if ! config.load(configFile, true)
       yield "Daemon configuration file is invalid. See syslog for details" if block_given?
       config = nil
