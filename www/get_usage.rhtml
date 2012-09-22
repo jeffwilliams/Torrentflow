@@ -1,0 +1,72 @@
+<%
+  #
+  # This method returns a JSON-encoded array of bucket objects on success.
+  # The first element of the array is not a torrent info object, but is instead 
+  # the string "success" on success, or an error message on failure. 
+  #
+
+  require 'functions'
+  require "json" 
+
+  attribs = []
+  attribsHash = {}
+  # This page expects the request to contain the following form variables:
+  #    type
+  #    qty
+  #
+  # type should have the value 'daily' or 'monthly'.
+  # qty should have the value 'current' or 'all'.
+  #
+  type = nil
+  qty = nil
+  Apache.request.paramtable.each{ |k,v|
+    k.untaint
+    if k == 'type'
+      type = v.to_s.untaint.to_sym
+    elsif k == 'qty'
+      qty = v.to_s.untaint.to_sym
+    end
+  }
+
+  errorMessage = nil
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    if ! sessionIsValid?(client, Apache.request)
+      client.close
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if client
+    # Special case: If type is not specified and qty is current, then
+    # get the daily current and monthly current in that order and return them.
+    buckets = nil
+    if ! type && qty == :current
+      buckets = client.getUsage(:daily, qty)
+      buckets.concat(client.getUsage(:monthly, qty)) if buckets
+    else
+      buckets = client.getUsage(type, qty)
+    end
+
+    if buckets
+      buckets = [buckets] if ! buckets.is_a?(Array)
+     
+      # Send the array of bucket objects as JSON
+      encoded = buckets.collect{ |b|
+        b
+      }
+      rc = ["success"]
+      rc.concat encoded
+      puts JSON.generate(rc)
+    else
+      puts JSON.generate([client.errorMsg])
+    end 
+    client.close
+  else 
+    puts JSON.generate([errorMessage])
+  end
+%>
