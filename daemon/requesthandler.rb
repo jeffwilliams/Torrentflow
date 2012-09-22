@@ -361,7 +361,7 @@ class UsageTrackingBackgroundThread < BackgroundThread
 
   def work
     SyslogWrapper.info "Starting the usage tracking thread."
-    while
+    while ! @done
       begin
         @mutex.synchronize {
           @usageTracker.update(@session.status.total_download + @session.status.total_upload)

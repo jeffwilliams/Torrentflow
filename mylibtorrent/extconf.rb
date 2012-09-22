@@ -1,6 +1,16 @@
 #!/usr/bin/ruby
 require 'mkmf'
 
+# Check if makefile already exists and if it is newer than us and the swig files.
+if File.exists?("Makefile")
+  makefileMtime = File.mtime("Makefile")
+  if ! ["extconf.rb"].concat(Dir.glob("*.i")).reduce(false){ |memo, i| memo || File.mtime(i) > makefileMtime }
+    puts "No dependencies were updated since Makefile was created."
+    exit 0
+  end
+end
+
+
 dir_config("libtorrent", "/usr/include/libtorrent", "/usr/lib")
 have_library("torrent-rasterbar")
 
