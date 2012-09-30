@@ -79,7 +79,7 @@ def sessionIsValid?(client, sessionHolder)
     sid = sessionHolder[:rubytorrent_sid]
   else
     # eRuby
-    sid = sessionHolder.cookies[SidCookieName]
+    sid = sessionHolder.cookies[SidCookieName].value
   end
   return false if !sid
   client.authSession(sid)

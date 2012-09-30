@@ -132,14 +132,14 @@
     <link rel="stylesheet" type="text/css" href="style.css" />
     <script language="javascript" src="prototype.js"></script>
     <script language="javascript">
-      var GET_TORRENTS_URL = "/get_torrents.rhtml"
-      var GET_ALERTS_URL = "/get_alerts.rhtml"
-      var GET_FSINFO_URL = "/get_fsinfo.rhtml"
-      var GET_USAGE_URL = "/get_usage.rhtml"
-      var GET_FILES_URL = "/get_files.rhtml"
-      var MODIFY_FILES_URL = "/modify_files.rhtml"
-      var GET_TORRENT_GRAPH_DATA_URL = "/get_torrentgraphdata.rhtml"
-      var DOWNLOAD_TORRENT_URL = "/unset"; /* This is not used in Apache version*/
+      var GET_TORRENTS_URL = "get_torrents.rhtml"
+      var GET_ALERTS_URL = "get_alerts.rhtml"
+      var GET_FSINFO_URL = "get_fsinfo.rhtml"
+      var GET_USAGE_URL = "get_usage.rhtml"
+      var GET_FILES_URL = "get_files.rhtml"
+      var MODIFY_FILES_URL = "modify_files.rhtml"
+      var GET_TORRENT_GRAPH_DATA_URL = "get_torrentgraphdata.rhtml"
+      var DOWNLOAD_TORRENT_URL = "unset"; /* This is not used in Apache version*/
     </script>
     <script language="javascript" src="code.js"></script>
   </head>
@@ -195,6 +195,16 @@
     <title>Torrentflow</title>
     <link rel="stylesheet" type="text/css" href="style.css" />
     <script language="javascript" src="prototype.js"></script>
+    <script language="javascript">
+      var GET_TORRENTS_URL = "get_torrents.rhtml"
+      var GET_ALERTS_URL = "get_alerts.rhtml"
+      var GET_FSINFO_URL = "get_fsinfo.rhtml"
+      var GET_USAGE_URL = "get_usage.rhtml"
+      var GET_FILES_URL = "get_files.rhtml"
+      var MODIFY_FILES_URL = "modify_files.rhtml"
+      var GET_TORRENT_GRAPH_DATA_URL = "get_torrentgraphdata.rhtml"
+      var DOWNLOAD_TORRENT_URL = "unset"; /* This is not used in Apache version*/
+    </script>
     <script language="javascript" src="code.js"></script>
   </head>
 <!--  <body onload="testUpdateTable('torrents_table_inprogress');"> -->
@@ -220,8 +230,11 @@
             <% end %>
             <div id="disk_status">[]</div>
           </div>
-          <p id="javascript_error" class="collapsed">
-          </p>
+          <div class="fullwidth">
+            <table id="javascript_errors" class="note">
+              <tbody/>
+            </table>
+          </div>
           <%
             if errorMessage || noticeMessage
               puts '<p class="note">'

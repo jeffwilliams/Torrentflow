@@ -1434,11 +1434,15 @@ function MessageDisplay(tableId, timeout)
 */
 function MessageDisplay_addMessage(id, message)
 {
-  if ( null != this.messages[id] ) 
+  if ( id != null ) 
   {
-    return;
+    if ( null != this.messages[id] ) 
+    {
+      return;
+    }
+    this.messages[id] = new Alert(id, message);
   }
-  this.messages[id] = new Alert(id, message);
+
   var table = document.getElementById(this.tableId);
   if ( null != table )
   {
