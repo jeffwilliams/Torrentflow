@@ -1,0 +1,32 @@
+%html
+  %head
+    %title Torrentflow - Login
+    %link{ :rel => "stylesheet", :type => "text/css", :href => "#{url("/style.css")}"}
+  %body
+    #maindiv_border
+      #maindiv
+        %div{ :class => "logindiv" }
+          %p{ :class => "logintitle" } RubyTorrent Login
+          - if locals[:error] || locals[:notice]
+            %p{ :class => "note" }
+              - if locals[:error]
+                = locals[:error]
+                %br
+              - if locals[:notice]
+                = locals[:notice]
+                %br
+          %form{ :method => "post", :action => "login" }
+            %input{ :type => "hidden", :name => "action", :value => "login" }
+            %table{ :class => "logintable" }
+              %tr
+                %td Login: 
+                %td 
+                  %input{ :type => "text", :name => "login" }
+              %tr
+                %td Password: 
+                %td 
+                  %input{ :type => "password", :name => "password" }
+              %tr
+                %td
+                %td
+                  %input{ :type => "submit", :value => "login" }

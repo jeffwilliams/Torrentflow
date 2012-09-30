@@ -186,6 +186,7 @@ th
 {
   background-color: #cccc33;
   border: 0.0625em solid #80801e;
+  width: 100%;
 }
 
 .collapsed
@@ -406,4 +407,12 @@ a
 {
   margin-left: 1em;
   display: block;
+}
+
+/* Make all iframes invisible. */
+iframe
+{
+  width: 0px;
+  height: 0px;
+  border: 0px solid #000000;
 }

@@ -1,0 +1,58 @@
+- require 'functions'
+- require 'ShowNameParse'
+%html
+  %head
+    %title Torrentflow
+    %link{ :rel => "stylesheet", :type => "text/css", :href => "#{url("/style.css")}"}
+    %script{:language => "javascript"}
+      :plain
+        var GET_TORRENTS_URL = "/get_torrents"  
+        var GET_ALERTS_URL = "/get_alerts"  
+        var GET_FSINFO_URL = "/get_fsinfo"  
+        var GET_USAGE_URL = "/get_usage"  
+        var GET_FILES_URL = "/get_files"
+        var MODIFY_FILES_URL = "/modify_files"
+        var GET_TORRENT_GRAPH_DATA_URL = "/get_torrentgraphdata"
+        var DOWNLOAD_TORRENT_URL = "/download_torrent"
+        var DOWNLOAD_MAGNET_URL = "/download_magnet"
+    %script{:language => "javascript", :src => "prototype.js"} 
+    %script{:language => "javascript", :src => "code.js"} 
+  %body
+    #maindiv_border
+      #maindiv
+        #title Torrentflow
+        - if locals[:error] || locals[:notice]
+          %p{ :class => "note" }
+            - if locals[:error]
+              = locals[:error]
+              %br
+            - if locals[:notice]
+              = locals[:notice]
+              %br
+        .torrenttabletitle
+          %span Downloaded Shows Status
+          %br/
+        .show_summary_div
+          - summaryHash = locals[:summaryHash]
+          - if summaryHash
+            - summaryHash.keys.sort.each do |k|
+              - ranges = summaryHash[k]
+              .show_div
+                .show_summary_showname
+                  = k + ':'
+                .show_summary_list
+                  - season = nil
+                  - comma = true
+                  - ranges.each do |r|
+                    - if ! season || season != r.season
+                      = "<br/>" if season
+                      = "  Season #{r.season}: "
+                      - season = r.season
+                      - comma = false
+                    - "," if comma
+                    - if r.size > 1
+                      = " #{r.startEpisode}-#{r.endEpisode}"
+                    - else
+                      = " #{r.startEpisode}"
+                    - comma = true
+                  %br/

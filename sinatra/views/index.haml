@@ -1,0 +1,163 @@
+%html
+  %head
+    %title Torrentflow
+    %link{ :rel => "stylesheet", :type => "text/css", :href => "#{url("/style.css")}"}
+    %script{:language => "javascript"}
+      :plain
+        var GET_TORRENTS_URL = "/get_torrents"  
+        var GET_ALERTS_URL = "/get_alerts"  
+        var GET_FSINFO_URL = "/get_fsinfo"  
+        var GET_USAGE_URL = "/get_usage"  
+        var GET_FILES_URL = "/get_files"
+        var MODIFY_FILES_URL = "/modify_files"
+        var GET_TORRENT_GRAPH_DATA_URL = "/get_torrentgraphdata"
+        var DOWNLOAD_TORRENT_URL = "/download_torrent"
+        var DOWNLOAD_MAGNET_URL = "/download_magnet"
+    %script{:language => "javascript", :src => "prototype.js"} 
+    %script{:language => "javascript", :src => "code.js"} 
+  %body{:onload => "startTorrentsUpdates(); initOverlayTabs();"}
+    #maindiv_border
+      #maindiv
+        #title Torrentflow
+        #statusdiv
+          #torrent_status 0 active torrents, 0 complete  
+          - if locals[:displayShowStatus]
+            #tv_show_status 
+              %a{ :href => url("/show_summary") } [tv show summary]
+          - if locals[:displayUsageTracking]
+            #usage_status []
+          #disk_status []
+        #javascript_error{ :class => "collapsed" } 
+        .fullwidth
+          %table{ :id => "javascript_errors", :class => "note"}
+            %tbody
+        - if locals[:error] || locals[:notice]
+          %p{ :class => "note" }
+            - if locals[:error]
+              = locals[:error]
+              %br
+            - if locals[:notice]
+              = locals[:notice]
+              %br
+        .inputs
+          %div{ :style => "float: left;" }
+            %table
+              %tr
+                %td Torrent URL:
+                %td
+                  %input{ :id => "torrenturl", :type => "text", :name => "torrenturl" } 
+                  %button{ :onclick => "downloadTorrentFromForm('torrenturl'); return false" } Get file
+              %tr
+                %td Magnet URL:
+                %td
+                  %input{ :id => "magneturl", :type => "text", :name => "magneturl" } 
+                  %button{ :onclick => "downloadMagnetFromForm('magneturl'); return false" } Get file
+              %tr
+                %td Torrent upload:
+                %td
+                  %form{ :method => "post", :enctype => "multipart/form-data", :action => "/upload_torrent", :target => "uploadiframe", :id => "torrent_upload_form" }
+                    %input{ :type => "file", :name => "torrentfile", :value => "browse..." } 
+                    %input{ :type => "submit", :value => "Upload" }
+          %div{ :style => "float: right;" }
+            %table{ :style => "text-align: right;" }
+              %tr
+                %td
+                  %input{ :type => "submit", :name => "action", :value => "view files", :onclick => "window.location = '/files';" }
+              %tr
+                %td
+                  %form{ :method => "post", :action => "logout" }
+                    %input{ :type => "hidden", :name => "action", :value => "logout" }
+                    %input{ :type => "submit", :name=> "action", :value => "logout" }
+        .torrenttabletitle
+          %span Torrents
+          %br
+        .torrenttablebuttons
+          %button{ :onclick => "pauseSelectedTorrents('torrents_table_inprogress'); return false" } Pause
+          %button{ :onclick => "removeSelectedTorrents('torrents_table_inprogress'); return false" } Remove Torrent 
+          %button{ :onclick => "removeSelectedTorrentsFiles('torrents_table_inprogress'); return false" } Remove Files
+        .fullwidth
+          %input{ :type => "hidden", :name => "action", :value => "modify_torrents" }
+          %table{ :id => "torrents_table_inprogress" }
+            %tr
+              %th{ :class => "namecol" } Name
+              %th{ :class => "sizecol" } Size
+              %th{ :class => "statuscol" } Status
+              %th{ :class => "ratescol" } Rates
+              %th{ :class => "progresscol" } Progress
+              %th{ :class => "timecol" } Estimated Time
+              %th{ :class => "detailscol" } Details
+              %th{ :class => "selcol" } Sel
+            %tbody
+              %tr{ :code => "loading" }
+                %td Loading data...
+        .torrenttablebuttons
+          %p
+            %span{ :id => "page_label" } Page 1/1
+            %button{ :onclick => "pageHandler_g.prevPage(); return false", :id => "prev_page", :class => "buttonlinkenabled" } prev
+            %button{ :onclick => "pageHandler_g.nextPage(); return false", :id => "next_page", :class => "buttonlinkenabled" } next
+
+    -# This is the overlay div
+    #overlay
+      %h1{ :class => "overlaytitle", :id => "overlay_title"} Title
+      #overlaytablabels
+        #tablabel1{ :class => "tablabel" } information
+        #tablabel2{ :class => "tablabel" }> graph
+        #tablabel3{ :class => "tablabel" } alerts
+      #overlaytabcontainer
+        #tab1{ :class => "tabbody" }
+          %div
+            %table
+              %tr
+                %td
+                  %table
+                    %tr
+                      %th Creator
+                      %td{ :id => "overlay_creator_col" }
+                    %tr
+                      %th Comment
+                      %td{ :id => "overlay_comment_col" }
+                    %tr
+                      %th Size
+                      %td{ :id => "overlay_size_col" }
+                    %tr
+                      %th Status
+                      %td{ :id => "overlay_status_col" }
+                    %tr
+                      %th Progress
+                      %td{ :id => "overlay_progress_col" }
+                    %tr
+                      %th Peers
+                      %td{ :id => "overlay_peers_col" }
+                    %tr
+                      %th Download Rate
+                      %td{ :id => "overlay_downloadrate_col" }
+                    %tr
+                      %th Upload Rate
+                      %td{ :id => "overlay_uploadrate_col" }
+                    %tr
+                      %th Download Rate Limit
+                      %td{ :id => "overlay_downloadratelimit_col" }
+                    %tr
+                      %th Upload Rate Limit
+                      %td{ :id => "overlay_uploadratelimit_col" }
+                    %tr
+                      %th Upload Ratio
+                      %td{ :id => "overlay_ratio_col" }
+                    %tr
+                      %th Max Connections
+                      %td{ :id => "overlay_max_connections_col" }
+                    %tr
+                      %th Max Uploads
+                      %td{ :id => "overlay_max_uploads_col" }
+        #tab2{ :class => "tabbody" }
+          %div
+            %div{ :style => "position: relative" }
+              #graphdiv1{ :class => "graphdiv" } Graph failed to load b.
+              #graphdiv2{ :class => "graphdiv" } Graph failed to load a.
+        #tab3{ :class => "tabbody" }
+          %div
+            %textarea{ :id => "overlay_alerts_textarea" }
+            #overlay_alerts_div
+      %button{ :class => "hidebutton", :onclick => "hideOverlay();"} hide
+    -# This is the file-upload iframe
+    %iframe{ :id => "uploadiframe", :name => "uploadiframe", :onload => 'handleIframeLoad("uploadiframe")' }

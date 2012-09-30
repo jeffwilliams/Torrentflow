@@ -28,6 +28,9 @@ var overlayVisible_g = false;
 
 var graphDivDoubleBuffer_g = null;
 
+// The object for displaying errors and notices
+var messageDisplay = new MessageDisplay("javascript_errors", 6000);
+setInterval(function(){messageDisplay.removeExpired()},1000);
 
 /*
  * This function should get the up-to-date torrent information. It will probably
@@ -89,12 +92,12 @@ function getTorrentsUsingAjax()
   params = {'total_size' : 1, 'state' : 1, 'estimated_time' : 1, 'progress' : 1, 'paused' : 1, 'download_rate' : 1,
     'upload_rate' : 1};
  
-  new Ajax.Request('get_torrents.rhtml',
+  // GET_TORRENTS_URL is defined externally
+  new Ajax.Request(GET_TORRENTS_URL,
     {
       method: 'get',
       parameters: params,
       onSuccess: function(transport){
-        var para = document.getElementById("javascript_error");
         // Parse the JSON response 
         resp = transport.responseText.evalJSON();
         successful = resp.shift();
@@ -103,21 +106,17 @@ function getTorrentsUsingAjax()
         {
           ajaxRetrievedTorrents_g = resp;
           ajaxRetrievedTorrents_g.sort(torrentSort);
-          // Clear any error messages
-          clearTdText(para);
-          para.setAttribute("class","collapsed");
         }
         else
         {
-          setNodeText(para, "Error: " + successful);
-          para.setAttribute("class","note");
+          messageDisplay.addMessage("getTorrents", "Error retrieving torrents: " + successful);
           ajaxRetrievedTorrents_g = []
         }
         updateTorrents();
         
       },
       onFailure: function(transport){
-        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
+        messageDisplay.addMessage("getTorrents", "Ajax error when retrieving torrents: " + transport.status + " " + transport.statusText);
         ajaxRetrievedTorrents_g = []
         updateTorrents();
       }
@@ -136,7 +135,8 @@ function getDetailedTorrentInfo(torrentName, callback)
     params['name'] = torrentName;
   }
  
-  new Ajax.Request('get_torrents.rhtml',
+  // GET_TORRENTS_URL is defined externally
+  new Ajax.Request(GET_TORRENTS_URL,
     {
       method: 'get',
       parameters: params,
@@ -152,7 +152,7 @@ function getDetailedTorrentInfo(torrentName, callback)
         
       },
       onFailure: function(transport){
-        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
+        messageDisplay.addMessage("getTorrents", "Ajax error when retrieving torrents: " + transport.status + " " + transport.statusText);
       }
     }
   );
@@ -168,12 +168,12 @@ function getAlerts(torrentName, callback)
     params['name'] = torrentName;
   }
  
-  new Ajax.Request('get_alerts.rhtml',
+  // GET_ALERTS_URL is defined externally
+  new Ajax.Request(GET_ALERTS_URL,
     {
       method: 'get',
       parameters: params,
       onSuccess: function(transport){
-        var para = document.getElementById("javascript_error");
         // Parse the JSON response 
         resp = transport.responseText.evalJSON();
         successful = resp.shift();
@@ -194,12 +194,12 @@ function getFsInfo(callbackSuccess, callbackError)
 {
   params = {};
 
-  new Ajax.Request('get_fsinfo.rhtml',
+  // GET_FSINFO_URL is defined externally
+  new Ajax.Request(GET_FSINFO_URL,
     {
       method: 'get',
       parameters: params,
       onSuccess: function(transport){
-        var para = document.getElementById("javascript_error");
         // Parse the JSON response 
         resp = transport.responseText.evalJSON();
         successful = resp.shift();
@@ -224,12 +224,12 @@ function getUsageInfo(callbackSuccess, callbackError)
 {
   params = {'qty' : 'current'}
 
-  new Ajax.Request('get_usage.rhtml',
+  // GET_USAGE_URL is defined externally
+  new Ajax.Request(GET_USAGE_URL,
     {
       method: 'get',
       parameters: params,
       onSuccess: function(transport){
-        var para = document.getElementById("javascript_error");
         // Parse the JSON response 
         resp = transport.responseText.evalJSON();
         successful = resp.shift();
@@ -258,7 +258,8 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
     params['dir'] = dir;
   }
 
-  new Ajax.Request('get_files.rhtml',
+  // GET_FILES_URL is defined externally
+  new Ajax.Request(GET_FILES_URL,
     {
       method: 'get',
       parameters: params,
@@ -278,7 +279,7 @@ function getFilesUsingAjax(dir, callbackSuccess, callbackError)
         
       },
       onFailure: function(transport){
-        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
+        messageDisplay.addMessage("getTorrents", "Ajax error when retrieving files: " + transport.status + " " + transport.statusText);
       }
     }
   );
@@ -294,7 +295,8 @@ function modifyTorrentsUsingAjax(torrentNameList, operation, onComplete)
     params["check" + torrentNameList[i]] = torrentNameList[i];
   }
 
-  new Ajax.Request('modify_files.rhtml',
+  // MODIFY_FILES_URL is defined externally
+  new Ajax.Request(MODIFY_FILES_URL,
     {
       method: 'get',
       parameters: params,
@@ -321,11 +323,78 @@ function modifyTorrentsUsingAjax(torrentNameList, operation, onComplete)
         }
       },
       onFailure: function(transport){
-        setJavascriptError("Ajax error: " + transport.status + " " + transport.statusText);
+        messageDisplay.addMessage("modifyFiles", "Ajax error when modifying torrents: " + transport.status + " " + transport.statusText);
       }
     }
   );
 }
+
+/* Type should be magnet or torrent*/
+function downloadTorrentUsingAjax(torrentUrl, downloadUrl, type, succCallback)
+{
+  params = {};
+
+  params[type + 'url'] = torrentUrl;
+ 
+  // DOWNLOAD_TORRENT_URL is defined externally
+  //new Ajax.Request(DOWNLOAD_TORRENT_URL,
+  new Ajax.Request(downloadUrl,
+    {
+      method: 'get',
+      parameters: params,
+      onSuccess: function(transport){
+        // Parse the JSON response 
+        resp = transport.responseText.evalJSON();
+        successful = resp.shift();
+
+        if (successful == "success")
+        {
+          messageDisplay.addMessage("download" + type, "URL retrieved");
+          if( succCallback != null )
+            succCallback();
+        }
+        else
+        {
+          messageDisplay.addMessage("download" + type, "Downloading " + type + " from URL failed: " + successful);
+        }
+      },
+      onFailure: function(transport){
+        messageDisplay.addMessage("download" + type, "Ajax error when downloading " + type + " file: " + transport.status + " " + transport.statusText);
+      }
+    }
+  );
+}
+
+function downloadTorrentFromForm(id)
+{
+  var input = document.getElementById(id);
+  if ( input == null )
+  {
+    messageDisplay.addMessage("downloadTorrent", "Downloading torrent from URL failed: No input element with id " + id);
+    return;
+  }
+
+  f = function(){
+    input.value = ''; 
+  }
+  downloadTorrentUsingAjax(input.value, DOWNLOAD_TORRENT_URL, "torrent", f);
+}
+
+function downloadMagnetFromForm(id)
+{
+  var input = document.getElementById(id);
+  if ( input == null )
+  {
+    messageDisplay.addMessage("downloadmagnet", "Downloading magnet from URL failed: No input element with id " + id);
+    return;
+  }
+
+  f = function(){
+    input.value = ''; 
+  }
+  downloadTorrentUsingAjax(input.value, DOWNLOAD_MAGNET_URL, "magnet", f);
+}
+
 
 function reloadTorrentsAfterModify()
 {
@@ -348,6 +417,7 @@ function pauseSelectedTorrents(tableId)
 {
   names = getSelectedNamesInTable(tableId);
   modifyTorrentsUsingAjax(names, "pause", reloadTorrentsAfterModify);
+  //messageDisplay.addMessage("pause", "Paused torrent");
 }
 
 function removeSelectedTorrentsFiles(tableId)
@@ -1267,7 +1337,9 @@ function loadOverlayContents(torrentInfo)
   getNodeAndSetText('overlay_max_uploads_col', torrentInfo['max_uploads']);
 
   // Generate the graph
-  var url = "get_torrentgraphdata.rhtml?name=" + localEncodeURI(name);
+  // GET_TORRENT_GRAPH_DATA_URL is defined externally
+  //var url = "get_torrentgraphdata.rhtml?name=" + localEncodeURI(name);
+  var url = GET_TORRENT_GRAPH_DATA_URL + "?name=" + localEncodeURI(name);
   var elem = document.getElementById("graphdiv");
 
   try{
@@ -1326,6 +1398,122 @@ function hideOverlay()
 function confirmFilesDelete()
 {
   return confirm('Are you sure you want to delete all the files and the torrent?');
+}
+
+/*********** ALERTS HANDLING *************/
+
+/*
+ Create a new alert
+*/
+function Alert(id, message)
+{
+  this.id = id;
+  this.message = message;
+  this.timestamp = (new Date()).getTime();
+}
+
+/**
+  This is a class for displaying error and notice messages in a table.
+  After a certain timeout the messages disappear.
+
+  tableId should be the id of the table where messages will be displayed.
+*/
+function MessageDisplay(tableId, timeout) 
+{
+  this.addMessage = MessageDisplay_addMessage;
+  this.removeExpired = MessageDisplay_removeExpired;
+
+  this.messages = new Array();
+  this.timeout = timeout;
+  this.tableId = tableId;
+}
+
+/**
+  Add a message to the MessageDisplay. If there is already a message with id
+  then this message is not added. If id is null then messages are always added.
+*/
+function MessageDisplay_addMessage(id, message)
+{
+  if ( null != this.messages[id] ) 
+  {
+    return;
+  }
+  this.messages[id] = new Alert(id, message);
+  var table = document.getElementById(this.tableId);
+  if ( null != table )
+  {
+    newRow = table.insertRow(-1);
+    newRow.messageId = id;
+    var newData = document.createElement('td')
+    newRow.appendChild(newData);
+    var newText = document.createTextNode(message);
+    newData.appendChild(newText);
+  }
+}
+
+function MessageDisplay_removeExpired() 
+{
+  var table = document.getElementById(this.tableId);
+  if ( table == null )
+  {
+    return;
+  }
+
+  var now = (new Date()).getTime();
+
+  // Flag rows for possible deletion. Leave the header row!
+  var rows = table.getElementsByTagName("tr");
+  for(var i = 0; i < rows.length; i++)
+  {
+    var id = rows[i].messageId 
+    if ( id != null )
+    {
+      message = this.messages[id];
+      if ( message != null )
+      {
+        if ( message.timestamp + this.timeout < now )
+        {
+          rows[i].do_delete = true;
+          delete this.messages[id];
+        } 
+      }
+    }
+  }
+
+  // Delete the rows that should be deleted
+  for(var i = 0; i < rows.length; i++)
+  {
+    if( rows[i].do_delete )
+    { 
+      rows[i].parentNode.removeChild(rows[i]);
+      i--;
+    }
+  }
+}
+
+/*********** IFRAME AJAX UPLOAD *************/
+
+function getFrameByName(name) {
+  for (var i = 0; i < frames.length; i++)
+    if (frames[i].name == name)
+      return frames[i];
+        
+  return null;
+}
+
+function handleIframeLoad(frameName)
+{
+  var frame = getFrameByName(frameName);
+  if ( frame != null )
+  {
+    result = frame.document.getElementsByTagName("body")[0].innerHTML;
+          
+    // The form's onload handler gets called when the main page is first loaded as well.
+    // We detect this condition by checking if the iframes contents are not empty.
+    if ( result.length > 0 ){
+      messageDisplay.addMessage("iframeLoad", result);
+    }
+  }
 }
 
 /*********** FILES HANDLING *************/
@@ -1435,6 +1623,7 @@ function setJavascriptError(val)
 function setJavascriptErrorToFirstElem(arr)
 {
   setJavascriptError(arr[0]);
+  messageDisplay.addMessage("javascriptError", "Error: " + arr[0]);
 }
 
 function handleRetrievedFiles(files)

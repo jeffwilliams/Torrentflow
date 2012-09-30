@@ -1,0 +1,60 @@
+%html
+  %head
+    %title Torrentflow
+    %link{ :rel => "stylesheet", :type => "text/css", :href => "#{url("/style.css")}"}
+    %script{:language => "javascript"}
+      :plain
+        var GET_TORRENTS_URL = "/get_torrents"  
+        var GET_ALERTS_URL = "/get_alerts"  
+        var GET_FSINFO_URL = "/get_fsinfo"  
+        var GET_USAGE_URL = "/get_usage"  
+        var GET_FILES_URL = "/get_files"
+        var MODIFY_FILES_URL = "/modify_files"
+        var GET_TORRENT_GRAPH_DATA_URL = "/get_torrentgraphdata"
+    %script{:language => "javascript", :src => "prototype.js"} 
+    %script{:language => "javascript", :src => "code.js"} 
+  %body{:onload => "startFilesUpdates();"}
+    #maindiv_border
+      #maindiv
+        #title Torrentflow
+        #statusdiv
+          #torrent_status 0 active torrents, 0 complete  
+          #disk_status []
+        #javascript_error{ :class => "collapsed" } 
+        .inputs
+          .div{ :style => "float: left;" }
+            %table
+              %tr
+                %td
+                  %button{ :onclick => "getFilesUsingAjax(currentFilesDir_g, handleRetrievedFiles, setJavascriptErrorToFirstElem); return false;" } refresh
+          .div{ :style => "float: right;" }
+            %table{ :style => "text-align: right;" }
+              %tr
+                %td
+                  %input{ :type => "submit", :name => "action", :value => "view torrents", :onclick => "window.location = '/';"}
+              %tr
+                %td
+                  %form{ :method => "post", :action => "logout" }
+                    %input{ :type => "hidden", :name => "action", :value => "logout" }
+                    %input{ :type => "submit", :name => "action", :value => "logout" }
+        .torrenttabletitle
+          %span{ :id => "files_title" } Files
+          %br
+        .torrenttablebuttons
+          %button{ :onclick => "removeSelectedDatadirFiles('file_table')"} Delete
+        .fullwidth
+          %input{ :type => "hidden", :name => "action", :value => "modify_torrents"}
+          %table{ :id => "file_table" }
+            %tr
+              %th{ :class => "namecol"} Name
+              %th{ :class => "modifiedcol"} Modified
+              %th{ :class => "sizecol"} Size
+              %th{ :class => "selcol"} Sel
+            %tbody
+              %tr{ :code => "loading" }
+                %td Loading data...
+        .torrenttablebuttons
+          %p
+            %span{ :id => "page_label"} Page 1/1 
+            %button{ :onclick => "pageHandler_g.prevPage(); return false", :id => "prev_page", :class => "buttonlinkenabled"}> prev
+            %button{ :onclick => "pageHandler_g.nextPage(); return false", :id => "next_page", :class => "buttonlinkenabled"} next

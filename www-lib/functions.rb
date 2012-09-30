@@ -1,6 +1,7 @@
 require 'daemonclient'
 require 'config'
 require 'SyslogWrapper'
+require 'json'
 
 SidCookieName = "rubytorrent_sid"
 
@@ -39,10 +40,49 @@ def createDaemonClient
   client
 end
 
-def sessionIsValid?(client, request)
-  sid = request.cookies[SidCookieName]
+# On success, yields the client, and returns nil. On failure, returns an error message. If the block
+# yielded to returns a value, that is treated as the error message.
+def withDaemonClient
+  port = 3000
+  # Try and load the port from the config file
+  config = loadConfig{ |errMsg| yield errMsg }
+  if config
+    port = config.listenPort
+  end
+  
+  begin
+    client = DaemonClient.new("localhost", port, 2)
+    err = yield client
+    client.close
+  rescue
+    return "Connecting to torrent daemon on port #{port} failed: #{$!}"
+  end
+  err 
+end
+
+# On success, yields the client, and returns nil. On failure, returns an error message. If the block
+# yielded to returns a value, that is treated as the error message.
+def withAuthenticatedDaemonClient
+  withDaemonClient do |client|
+    if ! sessionIsValid?(client, session)
+      "Your session has expired, or you need to log in"
+    else
+      yield client
+    end
+  end
+end
+
+def sessionIsValid?(client, sessionHolder)
+  sid = nil
+  if sessionHolder.is_a? Hash
+    # Sinatra
+    sid = sessionHolder[:rubytorrent_sid]
+  else
+    # eRuby
+    sid = sessionHolder.cookies[SidCookieName]
+  end
   return false if !sid
-  client.authSession(sid.value)
+  client.authSession(sid)
 end
 
 def handleLoginRequest(client, request)
@@ -88,3 +128,41 @@ def getDownloadedFileNamesRecursively(client, dir = nil)
   }
 end
 
+# Attribs should be an array of symbols that represent the attributes that should
+# be retrieved for the torrents. 
+# sessionHolder should be set to Apache.request or Sinatra's session variable.
+# Returns the value that should be sent in the http response body.
+def handleGetTorrentsRequest(attribs, torrentNameFilter, sessionHolder)
+  result = ""
+
+  errorMessage = nil
+  client = createDaemonClient{ |err|
+    errorMessage = err
+  }
+
+  if client
+    if ! sessionIsValid?(client, sessionHolder)
+      client.close
+      client = nil
+      errorMessage = "Your session has expired, or you need to log in"
+    end
+  end
+
+  if client
+    torrents = client.listTorrents(attribs, torrentNameFilter)
+    if torrents 
+      # Send the array of TorrentInfo objects as JSON
+      encoded = torrents.collect{ |t|
+        t.values
+      }
+      rc = ["success"]
+      rc.concat encoded
+      result = JSON.generate(rc)
+    end 
+    client.close
+  else 
+    result = JSON.generate([errorMessage])
+  end
+
+  result
+end
