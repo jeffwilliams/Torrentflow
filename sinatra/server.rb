@@ -25,6 +25,31 @@ enable :sessions
 # If this is set to false, then users don't have to login to manage torrents
 AuthenticationEnabled = true
 
+ConfigFileName = "torrentflowapp.conf"
+
+# The $urlBasePath variable is used for handling reverse proxy setups where torrentflow
+# is not running in the root of the proxying server.
+# For example, say Apache is reverse proxying /torrentflow to Sinatra, then 
+# you can add the line 
+#   pub_url_base_path: torrentflow
+# to torrentflowapp.conf and Sinatra will behave like the application is running on /torrentflow.
+# Note that the files under public/ must also be moved to public/torrentflow for Sinatra to find them.
+$urlBasePath = ""
+filename = "#{settings.root}/#{ConfigFileName}"
+if File.exists?(filename)
+  File.open(filename) do |fh|
+    yaml = YAML::load(fh)
+  
+    $urlBasePath = yaml['pub_url_base_path']
+    if $urlBasePath
+      $urlBasePath += '/' if $urlBasePath !~ /\/$/
+    else
+      $urlBasePath = ""
+    end
+  end
+  puts "Using a URL base application path of #{$urlBasePath} (application should be accessed as http://server/#{$urlBasePath}/)"
+end
+
 
 # Function that helps when implementing handlers for get requests that expect a 
 # JSON encoded array as a response.
@@ -45,9 +70,34 @@ def handleJSONRequest
   result
 end
 
+helpers do
+  # Get the publicly visible URL of this application. This is basically the
+  # same as the factory url() helper from Sinatra, except takes into account the $urlBasePath variable.
+  def puburl(addr = nil, absolute = false, add_script_name = true)
+    return addr if addr =~ /\A[A-z][A-z0-9\+\.\-]*:/
+    uri = [host = ""]
+    if absolute
+      host << "http#{'s' if request.secure?}://"
+      if request.forwarded? or request.port != (request.secure? ? 443 : 80)
+        host << request.host_with_port
+      else
+        host << request.host
+      end
+    end
+    uri << request.script_name.to_s if add_script_name
+    if addr =~ /^\/(.*)/
+      addr = "/#{$urlBasePath}#{$1}"
+    else
+      addr = "/#{$urlBasePath}#{addr}"
+    end
+    uri << (addr ? addr : request.path_info).to_s
+    File.join uri
+  end
+end
+
 ############# Sinatra Handlers ###############
 
-get '/' do
+get "/#{$urlBasePath}" do
 
   authenticated = false
   errorMessage = withDaemonClient do |client|
@@ -68,7 +118,7 @@ get '/' do
   end
 end
 
-get '/files' do
+get "/#{$urlBasePath}files" do
 
   authenticated = false
   errorMessage = withDaemonClient do |client|
@@ -87,7 +137,7 @@ get '/files' do
 end
 
 # Handle a user login request
-post '/login' do
+post "/#{$urlBasePath}login" do
   authenticated = false
   errorMessage = withDaemonClient do |client|
     err = nil
@@ -106,12 +156,12 @@ post '/login' do
   if ! authenticated && AuthenticationEnabled
     haml :login, :locals => {:error => errorMessage}
   else
-    redirect to('/')
+    redirect to(puburl('/'))
   end
 end
 
 # Handle a user logout request
-post '/logout' do
+post "/#{$urlBasePath}logout" do
   errorMessage = withDaemonClient do |client|
     sid = session[:rubytorrent_sid]
     return if !sid
@@ -141,15 +191,15 @@ def getTorrents
   handleGetTorrentsRequest(attribs, torrentNameFilter, session)
 end
 
-get '/get_torrents' do
+get "/#{$urlBasePath}get_torrents" do
   getTorrents
 end
 
-post '/get_torrents' do
+post "/#{$urlBasePath}get_torrents" do
   getTorrents
 end
 
-get '/get_alerts' do
+get "/#{$urlBasePath}get_alerts" do
   torrentNameFilter = params[:name]
   handleJSONRequest do |client|
     rc = nil
@@ -169,7 +219,7 @@ get '/get_alerts' do
   end
 end
 
-get '/get_fsinfo' do
+get "/#{$urlBasePath}get_fsinfo" do
 
   handleJSONRequest do |client|
     fsInfo = client.getFsInfo
@@ -190,7 +240,7 @@ get '/get_fsinfo' do
   end
 end
 
-get '/get_usage' do
+get "/#{$urlBasePath}get_usage" do
   type = params[:type]
   qty = params[:qty]
   type = type.to_sym if type
@@ -224,7 +274,7 @@ get '/get_usage' do
   end
 end
 
-get '/get_files' do
+get "/#{$urlBasePath}get_files" do
   dir = params[:dir]
   
   handleJSONRequest do |client|
@@ -244,7 +294,7 @@ get '/get_files' do
   end
 end
 
-get '/modify_files' do
+get "/#{$urlBasePath}modify_files" do
   handleJSONRequest do |client|
     rc = []
     errorMessage = nil
@@ -300,7 +350,7 @@ get '/modify_files' do
   end
 end
 
-get '/get_torrentgraphdata' do
+get "/#{$urlBasePath}get_torrentgraphdata" do
 
   torrentName = CGI.unescape(params[:name])
   
@@ -328,7 +378,7 @@ get '/get_torrentgraphdata' do
   rc
 end
 
-get '/download_torrent' do
+get "/#{$urlBasePath}download_torrent" do
   handleJSONRequest do |client|
     rc = []
     url = params[:torrenturl]
@@ -358,7 +408,7 @@ get '/download_torrent' do
   end
 end
 
-get '/download_magnet' do
+get "/#{$urlBasePath}download_magnet" do
   handleJSONRequest do |client|
     rc = []
     url = params[:magneturl]
@@ -385,7 +435,7 @@ get '/download_magnet' do
 end
 
 # Handle an upload of a torrent file.
-post '/upload_torrent' do
+post "/#{$urlBasePath}upload_torrent" do
   # See http://www.wooptoot.com/file-upload-with-sinatra
   withAuthenticatedDaemonClient do |client|
     path = params['torrentfile'][:tempfile].path
@@ -404,7 +454,7 @@ post '/upload_torrent' do
   end
 end
 
-get '/show_summary' do
+get "/#{$urlBasePath}show_summary" do
   summaryHash = nil
   errorMessage = withAuthenticatedDaemonClient do |client|
     summaryHash = client.getTvShowSummary

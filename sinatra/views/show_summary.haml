@@ -3,20 +3,20 @@
 %html
   %head
     %title Torrentflow
-    %link{ :rel => "stylesheet", :type => "text/css", :href => "#{url("/style.css")}"}
+    %link{ :rel => "stylesheet", :type => "text/css", :href => puburl("/style.css")}
     %script{:language => "javascript"}
       :plain
-        var GET_TORRENTS_URL = "/get_torrents"  
-        var GET_ALERTS_URL = "/get_alerts"  
-        var GET_FSINFO_URL = "/get_fsinfo"  
-        var GET_USAGE_URL = "/get_usage"  
-        var GET_FILES_URL = "/get_files"
-        var MODIFY_FILES_URL = "/modify_files"
-        var GET_TORRENT_GRAPH_DATA_URL = "/get_torrentgraphdata"
-        var DOWNLOAD_TORRENT_URL = "/download_torrent"
-        var DOWNLOAD_MAGNET_URL = "/download_magnet"
-    %script{:language => "javascript", :src => "prototype.js"} 
-    %script{:language => "javascript", :src => "code.js"} 
+        var GET_TORRENTS_URL = "#{puburl("/get_torrents")}"
+        var GET_ALERTS_URL = "#{puburl("/get_alerts")}"
+        var GET_FSINFO_URL = "#{puburl("/get_fsinfo")}"
+        var GET_USAGE_URL = "#{puburl("/get_usage")}"
+        var GET_FILES_URL = "#{puburl("/get_files")}"
+        var MODIFY_FILES_URL = "#{puburl("/modify_files")}"
+        var GET_TORRENT_GRAPH_DATA_URL = "#{puburl("/get_torrentgraphdata")}"
+        var DOWNLOAD_TORRENT_URL = "#{puburl("/download_torrent")}"
+        var DOWNLOAD_MAGNET_URL = "#{puburl("/download_magnet")}"
+    %script{:language => "javascript", :src => puburl("prototype.js")} 
+    %script{:language => "javascript", :src => puburl("code.js")} 
   %body
     #maindiv_border
       #maindiv
