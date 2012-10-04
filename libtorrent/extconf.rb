@@ -1,10 +1,16 @@
 #!/usr/bin/ruby
 require 'mkmf'
 
+# Return true if the *.i files or this file have been modified since
+# the specified time.
+def dependenciesModifiedSince?(time)
+  ["extconf.rb"].concat(Dir.glob("*.i")).reduce(false){ |memo, i| memo || File.mtime(i) > time }
+end
+
 # Check if makefile already exists and if it is newer than us and the swig files.
 if File.exists?("Makefile")
   makefileMtime = File.mtime("Makefile")
-  if ! ["extconf.rb"].concat(Dir.glob("*.i")).reduce(false){ |memo, i| memo || File.mtime(i) > makefileMtime }
+  if ! dependenciesModifiedSince?(makefileMtime)
     puts "No dependencies were updated since Makefile was created."
     exit 0
   end
@@ -34,15 +40,20 @@ if !libtorrentMajor == "0" || ! (libtorrentMinor == "13" || libtorrentMinor == "
   exit 1
 end
 
-swig = find_executable('swig')
-
-swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentMinor}"
-print "Generating C++ wrapper file..."
-if ! system("./runswig.rb #{swig} #{swigOpts}")
-  puts "Failed!"
-  exit 1
+if ! File.exists?("libtorrent.cpp") 
+  cppMtime = File.mtime("libtorrent.cpp")
+  if dependenciesModifiedSince?(cppMtime)
+    swig = find_executable('swig')
+    swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentMinor}"
+    print "Generating C++ wrapper file..."
+    if ! system("./runswig.rb #{swig} #{swigOpts}")
+      puts "Failed!"
+      exit 1
+    end
+    puts "Done"
+  end
 end
-puts "Done"
+
 
 # When make distclean is run, remove the swig generated sourcefile
 $distcleanfiles << "libtorrent.cpp"

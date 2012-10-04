@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+TorrentflowHome = nil
+RunDirectory = nil
+
+def runCommand(command)
+  args = ARGV.reduce(""){ |memo, i| memo + "'#{i}' "} 
+
+  system "#{command} #{args}"
+end
+
+Dir.chdir("#{TorrentflowHome}/#{RunDirectory}")
+
