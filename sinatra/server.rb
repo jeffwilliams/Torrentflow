@@ -471,3 +471,20 @@ get "/#{$urlBasePath}show_summary" do
   end
 end
 
+get "/#{$urlBasePath}get_alarms" do
+  handleJSONRequest do |client|
+    rc = []
+    alarms = client.getAlarms
+    if ! alarms
+      rc = ["Loading alarms failed: #{client.errorMsg}"]
+    else
+      rc = ["success"]
+      # Convert the alarms to a hashtable for JSON
+      alarms.each do |a|
+        rc.push a.toHash
+      end
+    end
+    rc
+  end
+end
+

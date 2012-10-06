@@ -5,6 +5,7 @@ require 'protocol'
 require 'DataPoint'
 require 'FileInfo'
 require 'TcpStreamHandler'
+require 'Alarm'
 
 class DaemonClient
   def initialize(addr, port, readTimeout = nil)
@@ -229,6 +230,20 @@ class DaemonClient
     rc = nil
     sendAndRecv(req){ |resp|
       rc = resp.buckets
+    }
+    rc
+  end
+
+  # Get the alarms that the daemon has raised. This is an array of Alarm objects.
+  # An alarm represents a persistent error condition 
+  # that exists in the daemon.
+  # An alarm can be 'raised' (in which case the condition is present) and 'lowered'
+  # in which case the condition is no longer present.
+  def getAlarms
+    req = DaemonGetAlarmsRequest.new
+    rc = nil
+    sendAndRecv(req){ |resp|
+      rc = resp.alarms
     }
     rc
   end

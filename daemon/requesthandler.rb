@@ -14,6 +14,7 @@ require 'FileInfo'
 require 'TcpStreamHandler'
 require 'ShowNameParse'
 require 'UsageTracker'
+require 'Alarm'
 
 # Load Mongo if it's installed. 
 $haveMongo = true
@@ -106,6 +107,8 @@ class RequestHandler
       handleGetMagnetRequest req
     elsif req.is_a? DaemonGetUsageRequest
       handleGetUsageRequest req
+    elsif req.is_a? DaemonGetAlarmsRequest
+      handleGetAlarmsRequest req
     else
       SyslogWrapper.info "Got an unknown request type #{req.class}"
       nil
@@ -341,7 +344,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
 end
 
 class UsageTrackingBackgroundThread < BackgroundThread
-  def initialize(session, mongoDb)
+  def initialize(session, mongoDb, requestHandler)
     @session = session
     resetDay = $config.usageMonthlyResetDay
     if ! resetDay
@@ -354,6 +357,8 @@ class UsageTrackingBackgroundThread < BackgroundThread
     end
     @usageTracker = UsageTracker.new(resetDay, mongoDb)
     @mutex = Mutex.new
+    @lastUsage = { :monthly => 0, :daily => 0}
+    @requestHandler = requestHandler
     super()
   end
   
@@ -366,8 +371,10 @@ class UsageTrackingBackgroundThread < BackgroundThread
         @mutex.synchronize {
           @usageTracker.update(@session.status.total_download + @session.status.total_upload)
         }
+        checkLimits
       rescue
         SyslogWrapper.info "Usage tracking thread got an exception: #{$!}."
+        SyslogWrapper.info "#{$!.backtrace.join("  ")}"
       end
       sleep 10
     end
@@ -378,6 +385,72 @@ class UsageTrackingBackgroundThread < BackgroundThread
       yield @usageTracker
     end
   end
+  
+  private
+  
+  def checkLimits
+    currentUsage = {}
+    @mutex.synchronize {
+      currentUsage[:daily] = @usageTracker.currentUsage(:daily).value
+      currentUsage[:monthly] = @usageTracker.currentUsage(:monthly).value
+    }
+    # Check if we have crossed a limit upwards. If we have just started
+    # and the first usage we retrieved is over a limit, then count this as crossing
+    # as well.
+    crossedDaily, aboveDaily = checkLimit($config.dailyLimit, @lastUsage[:daily], currentUsage[:daily])
+    crossedMonthly, aboveMonthly = checkLimit($config.monthlyLimit, @lastUsage[:monthly], currentUsage[:monthly])
+
+    if crossedDaily == :crossed_upwards
+      SyslogWrapper.info "Daily usage limit of #{Formatter.formatSize($config.dailyLimit)} has been crossed"
+    elsif crossedDaily == :crossed_downwards
+      SyslogWrapper.info "Daily usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
+    end
+    if crossedMonthly == :crossed_upwards
+      SyslogWrapper.info "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been crossed"
+    elsif crossedMonthly == :crossed_downwards
+      SyslogWrapper.info "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
+    end
+
+    if crossedDaily || crossedMonthly
+      if aboveDaily || aboveMonthly
+        SyslogWrapper.info "Pausing all torrents"
+        @requestHandler.setPauseStateForAllTorrents(true)
+        if aboveDaily
+          @requestHandler.raiseAlarm(:daily_limit, "Daily usage limit has been crossed. Torrents have been paused")
+        else
+          @requestHandler.raiseAlarm(:monthly_limit, "Monthly usage limit has been crossed. Torrents have been paused")
+        end
+      elsif belowDaily || belowMonthly
+        if belowDaily && belowMonthly
+          SyslogWrapper.info "Unpausing all torrents"
+          @requestHandler.setPauseStateForAllTorrents(false)
+        end
+        if belowDaily
+          @requestHandler.lowerAlarm :daily_limit
+        else
+          @requestHandler.lowerAlarm :monthly_limit
+        end
+      end
+    end
+
+    @lastUsage = currentUsage
+  end
+
+  # Returns an array. The first element is whether the limit was crossed and in which direction, 
+  # the second element whether the usage is currently above that limit.
+  def checkLimit(limit, lastUsage, currentUsage)
+    rc = []
+    if limit && lastUsage <= limit && currentUsage > limit
+      rc.push :crossed_upwards
+    elsif limit && lastUsage > limit && currentUsage <= limit
+      rc.push :crossed_downwards
+    else
+      rc.push :not_crossed
+    end
+
+    rc.push limit && currentUsage > limit
+  end
+
 end
 
 # A class for getting temporary names that are unique with regards to the currently 
@@ -495,8 +568,25 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
 
     @usageTrackingThread = nil
     if $config.enableUsageTracking
-      @usageTrackingThread = UsageTrackingBackgroundThread.new(@session, @mongoDb)
+      @usageTrackingThread = UsageTrackingBackgroundThread.new(@session, @mongoDb, self)
       @usageTrackingThread.run 
+    end
+
+    # Currently raised alarms, as a hashtable. The key is the alarm id, value is the Alarm object
+    @alarms = {}
+  end
+
+  def raiseAlarm(id, message)
+    @alarms[id] = Alarm.new(id, message) if ! @alarms.has_key?(id)
+  end
+
+  def lowerAlarm(id)
+    @alarms.delete id
+  end
+
+  def setPauseStateForAllTorrents(pause)
+    @session.torrents.each do |handle|
+      setPauseState(handle, pause)
     end
   end
 
@@ -970,6 +1060,14 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     resp
   end
 
+  def handleGetAlarmsRequest(req)
+    resp = DaemonGetAlarmsResponse.new
+    @alarms.each_value do |value|
+      resp.alarms.push value
+    end
+    resp
+  end
+
   private
 
   def stateToSym(state)
@@ -1147,5 +1245,20 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         yield e, dir
       end
     }
+  end
+
+  # Pause or unpause a torrent. Pause if pause is true, unpause if false.
+  def setPauseState(handle, pause)
+    if ! pause
+      if handle.respond_to?(:auto_managed=)
+        handle.auto_managed = true
+      end
+      handle.resume
+    else
+      if handle.respond_to?(:auto_managed=)
+        handle.auto_managed = false
+      end
+      handle.pause
+    end
   end
 end

@@ -169,6 +169,10 @@ class DaemonGetUsageRequest < DaemonRequest
   attr_accessor :qty
 end
 
+# Get any alarms raised in the daemon
+class DaemonGetAlarmsRequest < DaemonRequest
+end
+
 ####### RESPONSES ########
 class DaemonListTorrentsResponse < DaemonResponse
   def initialize
@@ -303,4 +307,14 @@ class DaemonGetUsageResponse < DaemonResponse
   end
 
   attr_accessor :buckets
+end
+
+class DaemonGetAlarmsResponse < DaemonResponse
+  def initialize
+    super
+    @alarms = []
+  end
+
+  # Returns an array of alarm objects
+  attr_accessor :alarms
 end

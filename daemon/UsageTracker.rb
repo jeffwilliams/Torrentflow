@@ -180,6 +180,12 @@ class UsageTracker
 
   attr_accessor :mongoDb
 
+  # Update the UsageTracker with more usage. The value passed
+  # should be the usage since the torrentflow session was created.
+  # If Mongo is not used, then this means stopping and starting the session
+  # will cause UsageTracking to only track usage for the session. However
+  # if Mongo is used then the usage can be saved and persisted between sessions
+  # and internally the value passed here is added to the value loaded from Mongo.
   def update(usageForAllTime)
     usageForAllTime += @usageForAllTimeAdjustment
     @buckets.each do |k,buckets|
@@ -188,13 +194,19 @@ class UsageTracker
     saveBucketsToMongo
   end
 
-  # Returns the usage as of the last time update() was called.
-  # periodType should be :daily or :monthly
+  # This method returns the usage in the current bucket for the specified
+  # period type (:daily or :monthly). The usage is accurate as of the last 
+  # time update() was called.
+  # The returned value is a single Bucket object.
   def currentUsage(periodType)
     getBuckets(periodType).current
   end
 
   # Returns the usage as of the last time update() was called.
+  # This method returns all the tracked usage for the specified
+  # period type (:daily or :monthly). The usage is accurate as of the last 
+  # time update() was called.
+  # The returned value is an array of Bucket objects.
   def allUsage(periodType)
     getBuckets(periodType).all
   end
@@ -233,6 +245,12 @@ class UsageTracker
       # contain the usage that we previously tracked, so we must add the old tracked value to what the torrentflow
       # session reports.
       @usageForAllTimeAdjustment = @buckets[:daily].current.absoluteUsageAtStartOfBucket + @buckets[:daily].current.value
+      SyslogWrapper.info "Loading usage from Mongo."
+      SyslogWrapper.info "Absolute usage at start of current daily bucket: " + @buckets[:daily].current.absoluteUsageAtStartOfBucket.to_s
+      SyslogWrapper.info "Usage in current daily bucket: " + @buckets[:daily].current.value.to_s
+      SyslogWrapper.info "Usage for all time adjustment: " + @usageForAllTimeAdjustment.to_s
+    else
+      SyslogWrapper.info "Not loading usage from Mongo."
     end
   end
 end

@@ -32,6 +32,9 @@ var graphDivDoubleBuffer_g = null;
 var messageDisplay = new MessageDisplay("javascript_errors", 6000);
 setInterval(function(){messageDisplay.removeExpired()},1000);
 
+// Currently raised alarms hash
+var alarms_g = new Object;
+
 /*
  * This function should get the up-to-date torrent information. It will probably
  * call an Ajax function to get the torrent info from the torrent daemon.
@@ -360,6 +363,33 @@ function downloadTorrentUsingAjax(torrentUrl, downloadUrl, type, succCallback)
       },
       onFailure: function(transport){
         messageDisplay.addMessage("download" + type, "Ajax error when downloading " + type + " file: " + transport.status + " " + transport.statusText);
+      }
+    }
+  );
+}
+
+/* If torrentName is null, then the global alerts are returned. Otherwise the alerts for that torrent are returned .*/
+function getAlarms(callback)
+{
+  params = {};
+
+  // GET_ALARMS_URL is defined externally
+  new Ajax.Request(GET_ALARMS_URL,
+    {
+      method: 'get',
+      parameters: params,
+      onSuccess: function(transport){
+        // Parse the JSON response 
+        resp = transport.responseText.evalJSON();
+        successful = resp.shift();
+
+        if (successful == "success")
+        {
+          callback(resp);
+        }
+
+      },
+      onFailure: function(){
       }
     }
   );
@@ -1205,6 +1235,7 @@ function updateStatusLine()
   
   getFsInfo(appendFsInfoToStatusLine, setFsInfoErrorToStatusLine);
   getUsageInfo(appendUsageInfoToStatusLine, setUsageInfoErrorToStatusLine);
+  getAlarms(updateDisplayedAlarms);
 }
 
 function appendFsInfoToStatusLine(fsInfo)
@@ -1400,16 +1431,26 @@ function confirmFilesDelete()
   return confirm('Are you sure you want to delete all the files and the torrent?');
 }
 
-/*********** ALERTS HANDLING *************/
+/*********** MESSAGE HANDLING *************/
 
 /*
  Create a new alert
 */
-function Alert(id, message)
+function Message(id, message)
 {
   this.id = id;
   this.message = message;
   this.timestamp = (new Date()).getTime();
+}
+
+/*
+ Create a new non-expiring alert
+*/
+function NonexpiringMessage(id, message)
+{
+  this.id = id;
+  this.message = message;
+  this.timestamp = null;
 }
 
 /**
@@ -1421,18 +1462,17 @@ function Alert(id, message)
 function MessageDisplay(tableId, timeout) 
 {
   this.addMessage = MessageDisplay_addMessage;
+  this.addNonexpiringMessage = MessageDisplay_addNonexpiringMessage;
   this.removeExpired = MessageDisplay_removeExpired;
+  this.delMessage = MessageDisplay_delMessage;
+  this.addMessageObj = MessageDisplay_addMessageObj;
 
   this.messages = new Array();
   this.timeout = timeout;
   this.tableId = tableId;
 }
 
-/**
-  Add a message to the MessageDisplay. If there is already a message with id
-  then this message is not added. If id is null then messages are always added.
-*/
-function MessageDisplay_addMessage(id, message)
+function MessageDisplay_addMessageObj(id, messageObj) 
 {
   if ( id != null ) 
   {
@@ -1440,7 +1480,7 @@ function MessageDisplay_addMessage(id, message)
     {
       return;
     }
-    this.messages[id] = new Alert(id, message);
+    this.messages[id] = messageObj;
   }
 
   var table = document.getElementById(this.tableId);
@@ -1450,9 +1490,23 @@ function MessageDisplay_addMessage(id, message)
     newRow.messageId = id;
     var newData = document.createElement('td')
     newRow.appendChild(newData);
-    var newText = document.createTextNode(message);
+    var newText = document.createTextNode(messageObj.message);
     newData.appendChild(newText);
   }
+}
+
+/**
+  Add a message to the MessageDisplay. If there is already a message with id
+  then this message is not added. If id is null then messages are always added.
+*/
+function MessageDisplay_addMessage(id, message)
+{
+  this.addMessageObj(id, new Message(id, message));
+}
+
+function MessageDisplay_addNonexpiringMessage(id, message) 
+{
+  this.addMessageObj(id, new NonexpiringMessage(id, message));
 }
 
 function MessageDisplay_removeExpired() 
@@ -1465,7 +1519,7 @@ function MessageDisplay_removeExpired()
 
   var now = (new Date()).getTime();
 
-  // Flag rows for possible deletion. Leave the header row!
+  // Flag rows for possible deletion. 
   var rows = table.getElementsByTagName("tr");
   for(var i = 0; i < rows.length; i++)
   {
@@ -1475,6 +1529,12 @@ function MessageDisplay_removeExpired()
       message = this.messages[id];
       if ( message != null )
       {
+        if ( message.timestamp == null )
+        {
+          // This is a non-expiring message
+          continue;
+        }
+
         if ( message.timestamp + this.timeout < now )
         {
           rows[i].do_delete = true;
@@ -1489,6 +1549,41 @@ function MessageDisplay_removeExpired()
   {
     if( rows[i].do_delete )
     { 
+      rows[i].parentNode.removeChild(rows[i]);
+      i--;
+    }
+  }
+}
+
+function MessageDisplay_delMessage(id)
+{
+  var table = document.getElementById(this.tableId);
+  if ( table == null )
+  {
+    return;
+  }
+
+  // Flag rows for possible deletion.
+  var rows = table.getElementsByTagName("tr");
+  for(var i = 0; i < rows.length; i++)
+  {
+    var msgId = rows[i].messageId
+    if ( msgId == id )
+    {
+      message = this.messages[id];
+      if ( message != null )
+      {
+        rows[i].do_delete = true;
+        delete this.messages[id];
+      }
+    }
+  }
+
+  // Delete the rows that should be deleted
+  for(var i = 0; i < rows.length; i++)
+  {
+    if( rows[i].do_delete )
+    {
       rows[i].parentNode.removeChild(rows[i]);
       i--;
     }
@@ -1715,4 +1810,39 @@ function initOverlayTabs()
   tabwidget.setOnVisibilityChange(overlayTabsOnVisibilityChange);
 
   tabwidget.showTab('tab1');
+}
+
+/*
+ * Given a new array of alarm information retrieved from a get_alarms
+ * call, update the displayed alarms in the MessageDisplay.
+ */
+function updateDisplayedAlarms(ajaxAlarms)
+{
+  var ajaxAlarmsHash = new Object;
+  for(var i = 0; i < ajaxAlarms.length; i++)
+  {
+    var ajaxAlarm = ajaxAlarms[i];
+    // Is this a new alarm?
+    if ( alarms_g[ajaxAlarm.id] == null )
+    {
+      // This alarm has been added since the last update
+      messageDisplay.addNonexpiringMessage("alarm" + ajaxAlarm.id, ajaxAlarm.message);
+      alarms_g[ajaxAlarm.id] = ajaxAlarm;
+    }
+    ajaxAlarmsHash[ajaxAlarm.id] = ajaxAlarm;
+  }
+
+  for (var key in alarms_g)
+  {
+    if (alarms_g.hasOwnProperty(key))
+    {
+      if ( ajaxAlarmsHash[key] == null )
+      {
+        // This alarm has been deleted since the last update
+        messageDisplay.delMessage("alarm" + key);
+        delete alarms_g[key];
+      }
+    }
+  }
+
 }

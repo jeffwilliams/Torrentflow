@@ -13,6 +13,7 @@
         var GET_TORRENT_GRAPH_DATA_URL = "#{puburl("/get_torrentgraphdata")}"
         var DOWNLOAD_TORRENT_URL = "#{puburl("/download_torrent")}"
         var DOWNLOAD_MAGNET_URL = "#{puburl("/download_magnet")}"
+        var GET_ALARMS_URL = "#{puburl("/get_alarms")}"
     %script{:language => "javascript", :src => puburl("prototype.js")} 
     %script{:language => "javascript", :src => puburl("code.js")} 
   %body{:onload => "startTorrentsUpdates(); initOverlayTabs();"}
