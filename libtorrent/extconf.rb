@@ -25,8 +25,8 @@ version = `pkg-config --modversion libtorrent-rasterbar`
 libtorrentMajor = nil
 libtorrentMinor = nil
 if version =~ /([^\.]+)\.([^\.]+)\..*/
-  libtorrentMajor = $1
-  libtorrentMinor = $2
+  libtorrentMajor = $1.to_i
+  libtorrentMinor = $2.to_i
   puts "libtorrent-rasterbar version: #{libtorrentMajor}.#{libtorrentMinor}"
 end
 
@@ -35,23 +35,20 @@ if !libtorrentMajor || !libtorrentMinor
   exit 1
 end
 
-if !libtorrentMajor == "0" || ! (libtorrentMinor == "13" || libtorrentMinor == "14")
-  puts "RubyTorrent only supports libtorrent 0.13 or 0.14 (each minor release breaks interface compatibility)"
+if libtorrentMajor != 0 || libtorrentMinor < 14
+  puts "RubyTorrent only supports libtorrent 0.14 or higher."
   exit 1
 end
 
-if ! File.exists?("libtorrent.cpp") 
-  cppMtime = File.mtime("libtorrent.cpp")
-  if dependenciesModifiedSince?(cppMtime)
-    swig = find_executable('swig')
-    swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentMinor}"
-    print "Generating C++ wrapper file..."
-    if ! system("./runswig.rb #{swig} #{swigOpts}")
-      puts "Failed!"
-      exit 1
-    end
-    puts "Done"
+if ! File.exists?("libtorrent.cpp") || dependenciesModifiedSince?(File.mtime("libtorrent.cpp"))
+  swig = find_executable('swig')
+  swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentMinor}"
+  print "Generating C++ wrapper file..."
+  if ! system("./runswig.rb #{swig} #{swigOpts}")
+    puts "Failed!"
+    exit 1
   end
+  puts "Done"
 end
 
 
