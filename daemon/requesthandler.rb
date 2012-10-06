@@ -3,7 +3,7 @@ require 'torrentinfo'
 require 'fileutils'
 require 'open-uri'
 require 'TestingTorrentList'
-require '../mylibtorrent/libtorrent'
+require '../libtorrent/libtorrent'
 require 'Authentication'
 require 'Formatter'
 require 'TimeSampleHolder'
@@ -411,7 +411,7 @@ class UsageTrackingBackgroundThread < BackgroundThread
       SyslogWrapper.info "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
     end
 
-    if crossedDaily || crossedMonthly
+    if crossedDaily != :not_crossed || crossedMonthly != :not_crossed
       if aboveDaily || aboveMonthly
         SyslogWrapper.info "Pausing all torrents"
         @requestHandler.setPauseStateForAllTorrents(true)
@@ -420,12 +420,12 @@ class UsageTrackingBackgroundThread < BackgroundThread
         else
           @requestHandler.raiseAlarm(:monthly_limit, "Monthly usage limit has been crossed. Torrents have been paused")
         end
-      elsif belowDaily || belowMonthly
-        if belowDaily && belowMonthly
+      elsif ! aboveDaily || ! aboveMonthly
+        if ! aboveDaily && ! aboveMonthly
           SyslogWrapper.info "Unpausing all torrents"
           @requestHandler.setPauseStateForAllTorrents(false)
         end
-        if belowDaily
+        if ! aboveDaily
           @requestHandler.lowerAlarm :daily_limit
         else
           @requestHandler.lowerAlarm :monthly_limit
