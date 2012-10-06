@@ -233,6 +233,7 @@ class UsageTracker
 
   def loadBucketsFromMongo
     if @mongoDb
+      SyslogWrapper.info "Loading usage from Mongo."
       dailyCollection = @mongoDb.collection("daily_usage")
       monthlyCollection = @mongoDb.collection("monthly_usage")
 
@@ -244,11 +245,14 @@ class UsageTracker
       # If we are loading from Mongo it means that the absolute usage returned from the torrentflow session will not
       # contain the usage that we previously tracked, so we must add the old tracked value to what the torrentflow
       # session reports.
-      @usageForAllTimeAdjustment = @buckets[:daily].current.absoluteUsageAtStartOfBucket + @buckets[:daily].current.value
-      SyslogWrapper.info "Loading usage from Mongo."
-      SyslogWrapper.info "Absolute usage at start of current daily bucket: " + @buckets[:daily].current.absoluteUsageAtStartOfBucket.to_s
-      SyslogWrapper.info "Usage in current daily bucket: " + @buckets[:daily].current.value.to_s
-      SyslogWrapper.info "Usage for all time adjustment: " + @usageForAllTimeAdjustment.to_s
+      if @buckets[:daily].current
+        @usageForAllTimeAdjustment = @buckets[:daily].current.absoluteUsageAtStartOfBucket + @buckets[:daily].current.value
+        SyslogWrapper.info "Absolute usage at start of current daily bucket: " + @buckets[:daily].current.absoluteUsageAtStartOfBucket.to_s
+        SyslogWrapper.info "Usage in current daily bucket: " + @buckets[:daily].current.value.to_s
+        SyslogWrapper.info "Usage for all time adjustment: " + @usageForAllTimeAdjustment.to_s
+      else
+        SyslogWrapper.info "No usage loaded in Mongo (empty collection)."
+      end
     else
       SyslogWrapper.info "Not loading usage from Mongo."
     end
