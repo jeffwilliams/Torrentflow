@@ -100,7 +100,7 @@ def parseConfig
   # Find config file
   configPath = TorrentflowConfig::findConfigFile
   if ! configPath
-    SyslogWrapper.info "Error: Can't locate config file #{TorrentflowConfig::TorrentConfigFilename} in the current dir or in /etc."
+    SyslogWrapper.info "Error: Can't locate config file #{TorrentflowConfig::TorrentConfigFilename}."
     exit 1
   end
 

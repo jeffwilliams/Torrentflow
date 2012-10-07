@@ -26,7 +26,7 @@ class TorrentflowConfig
   end
   
   # This function searches the RUBY loadpath to try and find the standard config file.
-  # If it's not found in the load path, the current directory and /etc/ are searched.
+  # If it's not found in the load path, the current directory, ../etc, etc/, and /etc/ are searched.
   # If found it returns the full path, if not it returns nil.
   def self.findConfigFile
 
@@ -37,6 +37,10 @@ class TorrentflowConfig
   
     if File.exists?(TorrentConfigFilename)
       return TorrentConfigFilename
+    elsif File.exists?("../etc/#{TorrentConfigFilename}")
+      return Dir.pwd + "/../etc/#{TorrentConfigFilename}"
+    elsif File.exists?("etc/#{TorrentConfigFilename}")
+      return Dir.pwd + "/etc/#{TorrentConfigFilename}"
     elsif File.exists?("/etc/#{TorrentConfigFilename}")
       return "/etc/#{TorrentConfigFilename}"
     end
