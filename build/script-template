@@ -6,8 +6,15 @@ RunDirectory = nil
 def runCommand(command)
   args = ARGV.reduce(""){ |memo, i| memo + "'#{i}' "} 
 
-  system "#{command} #{args}"
+  exec "#{command} #{args}"
 end
+
+if ! TorrentflowHome
+  puts "Torrentflow home is not set. Did you run install.rb?"
+  exit 1
+end
+
+ENV["TORRENTFLOW_HOME"] = TorrentflowHome
 
 Dir.chdir("#{TorrentflowHome}/#{RunDirectory}")
 

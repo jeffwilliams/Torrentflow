@@ -52,6 +52,7 @@ FileUtils.cp_r "daemon", packageDir
 FileUtils.cp_r "sinatra", packageDir
 FileUtils.cp_r "www", packageDir
 FileUtils.cp_r "www-lib", packageDir
+FileUtils.cp_r "etc", packageDir
 FileUtils.cp_r "build/install.rb", packageDir
 
 libtorrentDir = "#{packageDir}/libtorrent"
