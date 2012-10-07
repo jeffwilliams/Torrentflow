@@ -69,6 +69,7 @@ makeBinScript(binDir, "adduser", "daemon") do |io|
   io.puts "runCommand \'./adduser.rb\'"
 end
 makeBinScript(binDir, "appserver", "") do |io|
+  io.puts "ENV['RACK_ENV'] = 'production'"
   io.puts "runCommand \'sinatra/server.rb\'"
 end
 

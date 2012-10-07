@@ -4,7 +4,7 @@ require 'fileutils'
 Version = "0.0"
 
 RequiredBinaries = ["g++", "make", "gem"]
-RequiredGems = ["sinatra", "haml"]
+RequiredGems = ["sinatra", "haml", "json", "mahoro"]
 RecommendedGems = ["mongo"]
 InstallLog = "install.log"
 
