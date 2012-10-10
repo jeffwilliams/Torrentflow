@@ -233,7 +233,7 @@ class UsageTracker
 
   def loadBucketsFromMongo
     if @mongoDb
-      SyslogWrapper.info "Loading usage from Mongo."
+      $logger.info "Loading usage from Mongo."
       dailyCollection = @mongoDb.collection("daily_usage")
       monthlyCollection = @mongoDb.collection("monthly_usage")
 
@@ -247,14 +247,14 @@ class UsageTracker
       # session reports.
       if @buckets[:daily].current
         @usageForAllTimeAdjustment = @buckets[:daily].current.absoluteUsageAtStartOfBucket + @buckets[:daily].current.value
-        SyslogWrapper.info "Absolute usage at start of current daily bucket: " + @buckets[:daily].current.absoluteUsageAtStartOfBucket.to_s
-        SyslogWrapper.info "Usage in current daily bucket: " + @buckets[:daily].current.value.to_s
-        SyslogWrapper.info "Usage for all time adjustment: " + @usageForAllTimeAdjustment.to_s
+        $logger.info "Absolute usage at start of current daily bucket: " + @buckets[:daily].current.absoluteUsageAtStartOfBucket.to_s
+        $logger.info "Usage in current daily bucket: " + @buckets[:daily].current.value.to_s
+        $logger.info "Usage for all time adjustment: " + @usageForAllTimeAdjustment.to_s
       else
-        SyslogWrapper.info "No usage loaded in Mongo (empty collection)."
+        $logger.info "No usage loaded in Mongo (empty collection)."
       end
     else
-      SyslogWrapper.info "Not loading usage from Mongo."
+      $logger.info "Not loading usage from Mongo."
     end
   end
 end

@@ -1,4 +1,14 @@
 #!/usr/bin/ruby
+
+# Setup the load path
+if ! File.directory?("daemon")
+  $stderr.puts "The daemon directory cannot be found. Make sure to run this script from the base installation directory, as 'daemon/adduser.rb'"
+  exit 1
+end
+if ! $:.include?("daemon")
+  $: << "daemon"
+end
+
 require 'config'
 require 'Authentication'
 

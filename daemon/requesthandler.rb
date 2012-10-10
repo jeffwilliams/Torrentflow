@@ -3,12 +3,11 @@ require 'torrentinfo'
 require 'fileutils'
 require 'open-uri'
 require 'TestingTorrentList'
-require '../libtorrent/libtorrent'
+require 'libtorrent/libtorrent'
 require 'Authentication'
 require 'Formatter'
 require 'TimeSampleHolder'
 require 'DataPoint'
-require 'SyslogWrapper'
 require 'pathname'
 require 'FileInfo'
 require 'TcpStreamHandler'
@@ -65,7 +64,7 @@ class RequestHandler
       end
     end
     if ! @done
-      #SyslogWrapper.info "Client #{addr}:#{port} disconnected. Closing socket."
+      #$logger.info "Client #{addr}:#{port} disconnected. Closing socket."
     end
   end
 
@@ -110,7 +109,7 @@ class RequestHandler
     elsif req.is_a? DaemonGetAlarmsRequest
       handleGetAlarmsRequest req
     else
-      SyslogWrapper.info "Got an unknown request type #{req.class}"
+      $logger.warn "Got an unknown request type #{req.class}"
       nil
     end
   end
@@ -224,9 +223,9 @@ class BackgroundThread
       begin
         work
       rescue
-        SyslogWrapper.info "[Thread #{self.object_id}] Caught an unhandled exception in #{self.class.name} thread: #{$!}"
+        $logger.error "[Thread #{self.object_id}] Caught an unhandled exception in #{self.class.name} thread: #{$!}"
       end
-      SyslogWrapper.info "[Thread #{self.object_id}] Thread terminating"
+      $logger.info "[Thread #{self.object_id}] Thread terminating"
     }
   end 
 
@@ -279,7 +278,7 @@ class GraphDataThread < TorrentHandleBackgroundThread
         sleep 5
       end
     rescue
-      SyslogWrapper.info "Exception in graph data thread: #{$!}"
+      $logger.error "Exception in graph data thread: #{$!}"
     end    
   end
 end
@@ -295,7 +294,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
   def work
     begin
 
-      SyslogWrapper.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.name} "
+      $logger.info "[Thread #{self.object_id}] Started monitoring time seeding for #{@handle.name} "
       @done = false
       startTime = Time.new
       while ! @done
@@ -304,11 +303,11 @@ class SeedingStopThread < TorrentHandleBackgroundThread
         if @handle.status.state == Libtorrent::TorrentStatus::SEEDING
           seconds = getTimeSeeding
           if seconds && seconds  > @maxUploadSeconds
-            SyslogWrapper.info "[Thread #{self.object_id}] The torrent #{@handle.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
+            $logger.info "[Thread #{self.object_id}] The torrent #{@handle.name} has been seeding for #{seconds} seconds, which is more than #{@maxUploadSeconds}. stopping seeding."
             if @handle.respond_to?(:auto_managed=)
               @handle.auto_managed = false
             else
-              SyslogWrapper.info "Can't un-auto-manage torrent since the version of libtorrent is too old"
+              $logger.warn "Can't un-auto-manage torrent since the version of libtorrent is too old"
             end
             @handle.pause
             @done = true
@@ -317,11 +316,10 @@ class SeedingStopThread < TorrentHandleBackgroundThread
         sleep 10
       end
     rescue
-      SyslogWrapper.info "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.name}"
-      SyslogWrapper.info "[Thread #{self.object_id}] Exception: #{$!}"
-      puts "Exception in seeding monitoring thread: #{$!}"
+      $logger.error "[Thread #{self.object_id}] Got exception when monitoring time seeding for #{@handle.name}"
+      $logger.error "[Thread #{self.object_id}] Exception: #{$!}"
     end
-    SyslogWrapper.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.name} exiting."
+    $logger.info "[Thread #{self.object_id}] Thread monitoring time seeding for #{@handle.name} exiting."
   end
 
   def getTimeSeeding
@@ -334,7 +332,7 @@ class SeedingStopThread < TorrentHandleBackgroundThread
       end
     }
     if !newest
-      SyslogWrapper.info "Warning: The torrent #{@handle.name} is seeding, but has no files in the data dir"
+      $logger.warn "The torrent #{@handle.name} is seeding, but has no files in the data dir"
       nil
     else
       Time.new - newest
@@ -348,12 +346,12 @@ class UsageTrackingBackgroundThread < BackgroundThread
     @session = session
     resetDay = $config.usageMonthlyResetDay
     if ! resetDay
-      SyslogWrapper.info "Usage tracking is enabled, but the monthly reset day was not specified. Defaulting to the 1st of the month."
+      $logger.info "Usage tracking is enabled, but the monthly reset day was not specified. Defaulting to the 1st of the month."
       resetDay = 1
     end
     if ! mongoDb
-      SyslogWrapper.info "No Mongo connection; tracked usage won't be persistent across torrentflow restarts."
-      SyslogWrapper.info "This means a restart will cause limit enforcement to fail."
+      $logger.info "No Mongo connection; tracked usage won't be persistent across torrentflow restarts."
+      $logger.info "This means a restart will cause limit enforcement to fail."
     end
     @usageTracker = UsageTracker.new(resetDay, mongoDb)
     @mutex = Mutex.new
@@ -365,7 +363,7 @@ class UsageTrackingBackgroundThread < BackgroundThread
   attr_accessor :mutex
 
   def work
-    SyslogWrapper.info "Starting the usage tracking thread."
+    $logger.info "Starting the usage tracking thread."
     while ! @done
       begin
         @mutex.synchronize {
@@ -373,8 +371,8 @@ class UsageTrackingBackgroundThread < BackgroundThread
         }
         checkLimits
       rescue
-        SyslogWrapper.info "Usage tracking thread got an exception: #{$!}."
-        SyslogWrapper.info "#{$!.backtrace.join("  ")}"
+        $logger.error "Usage tracking thread got an exception: #{$!}."
+        $logger.error "#{$!.backtrace.join("  ")}"
       end
       sleep 10
     end
@@ -401,19 +399,19 @@ class UsageTrackingBackgroundThread < BackgroundThread
     crossedMonthly, aboveMonthly = checkLimit($config.monthlyLimit, @lastUsage[:monthly], currentUsage[:monthly])
 
     if crossedDaily == :crossed_upwards
-      SyslogWrapper.info "Daily usage limit of #{Formatter.formatSize($config.dailyLimit)} has been crossed"
+      $logger.warn "Daily usage limit of #{Formatter.formatSize($config.dailyLimit)} has been crossed"
     elsif crossedDaily == :crossed_downwards
-      SyslogWrapper.info "Daily usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
+      $logger.warn "Daily usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
     end
     if crossedMonthly == :crossed_upwards
-      SyslogWrapper.info "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been crossed"
+      $logger.warn "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been crossed"
     elsif crossedMonthly == :crossed_downwards
-      SyslogWrapper.info "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
+      $logger.warn "Monthly usage limit of #{Formatter.formatSize($config.dailyLimit)} has been renewed"
     end
 
     if crossedDaily != :not_crossed || crossedMonthly != :not_crossed
       if aboveDaily || aboveMonthly
-        SyslogWrapper.info "Pausing all torrents"
+        $logger.warn "Pausing all torrents"
         @requestHandler.setPauseStateForAllTorrents(true)
         if aboveDaily
           @requestHandler.raiseAlarm(:daily_limit, "Daily usage limit has been crossed. Torrents have been paused")
@@ -422,7 +420,7 @@ class UsageTrackingBackgroundThread < BackgroundThread
         end
       elsif ! aboveDaily || ! aboveMonthly
         if ! aboveDaily && ! aboveMonthly
-          SyslogWrapper.info "Unpausing all torrents"
+          $logger.warn "Unpausing all torrents"
           @requestHandler.setPauseStateForAllTorrents(false)
         end
         if ! aboveDaily
@@ -531,7 +529,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         begin
           loadAndAddTorrent(path, file)
         rescue
-          SyslogWrapper.info "Failed to load #{path}: it is not a valid torrent: #{$!}"
+          $logger.error "Failed to load #{path}: it is not a valid torrent: #{$!}"
         end
       end
     }
@@ -548,20 +546,20 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
 
     # Connect to Mongo if it's available
     if $haveMongo && $config.mongoDb
-      SyslogWrapper.info "Connecting to mongo"
+      $logger.info "Connecting to mongo"
       # Connection.new accepts nil arguments for host and port
       begin
         @mongoConnection = Mongo::Connection.new($config.mongoHost, $config.mongoPort)
         @mongoDb = @mongoConnection.db($config.mongoDb)
         if $config.mongoUser
           if ! @mongoDb.authenticate($config.mongoUser, $config.mongoPass)
-            SyslogWrapper.info "Authenticating to Mongo failed: #{$!}"
+            $logger.error "Authenticating to Mongo failed: #{$!}"
             @mongoConnection = nil
             @mongoDb = nil
           end
         end
       rescue
-        SyslogWrapper.info "Connecting to Mongo failed: #{$!}"
+        $logger.error "Connecting to Mongo failed: #{$!}"
         @mongoConnection = nil
       end
     end
@@ -685,7 +683,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       tempName = @magnetTempNameMgr.newName
       handle = Libtorrent::add_magnet_uri(@session, req.sourcePath, $config.dataDir, tempName)
       if ! handle.valid?
-        SyslogWrapper.info "handleGetMagnetRequest: handle returned is invalid"
+        $logger.error "handleGetMagnetRequest: handle returned is invalid"
         resp.successful = false
         resp.errorMsg = "Invalid magnet link"
       else
@@ -697,7 +695,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
             tries -= 1
           end
           if ! handle.has_metadata
-            SyslogWrapper.info "handleGetMagnetRequest: Could never get metadata for magnet link #{tempName} ('#{req.sourcePath}'). Removing torrent."
+            $logger.error "handleGetMagnetRequest: Could never get metadata for magnet link #{tempName} ('#{req.sourcePath}'). Removing torrent."
             @session.remove_torrent(handle, Libtorrent::Session::DELETE_FILES)
           else
             adjustTorrentHandle(handle, handle.info, "Magnet File")
@@ -705,7 +703,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
           @magnetTempNameMgr.freeName(tempName)
         }
       end
-      SyslogWrapper.info "handleGetMagnetRequest: Add completed"
+      $logger.info "handleGetMagnetRequest: Add completed"
     rescue
       resp.successful = false
       resp.errorMsg = $!.to_s
@@ -761,7 +759,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       begin
         FileUtils.cp(req.sourcePath, destpath)
       rescue
-        SyslogWrapper.info "Error: handleGetTorrentRequest: Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
+        $logger.error "handleGetTorrentRequest: Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
         resp.successful = false
         resp.errorMsg = "Can't copy file '#{req.sourcePath}' to torrents dir: #{$!}"
         return resp
@@ -791,7 +789,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
           end
         }
       rescue
-        SyslogWrapper.info "Error: handleGetTorrentRequest: Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
+        $logger.error "handleGetTorrentRequest: Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
         resp.successful = false
         resp.errorMsg = "Can't download URL '#{req.sourcePath}' to torrents dir: #{$!}"
       end
@@ -800,7 +798,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleTerminateRequest(req)
-    SyslogWrapper.info "Terminating at user request."
+    $logger.info "Terminating at user request."
     resp = DaemonTerminateResponse.new
     resp.successful = true
     terminate
@@ -1207,7 +1205,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         false
       end
     rescue
-      SyslogWrapper.info("loadAndAddTorrent: Exception adding torrent: #{$!}")
+      $logger.error("loadAndAddTorrent: Exception adding torrent: #{$!}")
       raise $!
     end
   end

@@ -1,5 +1,5 @@
 require 'yaml'
-require 'SyslogWrapper'
+require 'logging'
 
 class TorrentflowConfig
   TorrentConfigFilename = "torrentflowdaemon.conf"
@@ -20,7 +20,7 @@ class TorrentflowConfig
         return handleYaml(yaml, dontValidateDirs)
       }
     else
-      SyslogWrapper.info "Loading config file failed: file '#{filename}' doesn't exist."
+      $logger.info "Loading config file failed: file '#{filename}' doesn't exist."
     end
     rc
   end
@@ -93,6 +93,15 @@ class TorrentflowConfig
   attr_accessor :mongoHost
   attr_accessor :mongoPort
 
+  # Logging
+  attr_accessor :logType
+  attr_accessor :logLevel
+  attr_accessor :logFile
+  attr_accessor :logLevel
+  attr_accessor :logSize
+  attr_accessor :logCount
+  attr_accessor :logFacility
+
   private 
   def handleYaml(yaml, dontValidateDirs = false)
     @listenPort = yaml['port'].to_i
@@ -103,7 +112,7 @@ class TorrentflowConfig
     return false if ! dontValidateDirs && ! validateDir(@dataDir, 'data_dir')
     @passwordFile = yaml['password_file']
     if ! @passwordFile
-      SyslogWrapper.info "Error: the configuration file had no 'password_file' setting."
+      $logger.error "The configuration file had no 'password_file' setting."
       return false
     end
 
@@ -111,16 +120,16 @@ class TorrentflowConfig
     @torrentPortHigh = yaml['torrent_port_high'].to_i
 
     if ! @torrentPortLow || ! @torrentPortHigh
-      SyslogWrapper.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are missing."
+      $logger.error "The configuration file torrent_port_low and/or torrent_port_high settings are missing."
       return false
     end
 
     if @torrentPortLow > @torrentPortHigh
-      SyslogWrapper.info "Error: the configuration file torrent_port_low is > torrent_port_high."
+      $logger.error "The configuration file torrent_port_low is > torrent_port_high."
       return false
     end
     if @torrentPortLow == 0 || @torrentPortHigh == 0
-      SyslogWrapper.info "Error: the configuration file torrent_port_low and/or torrent_port_high settings are invalid."
+      $logger.error "The configuration file torrent_port_low and/or torrent_port_high settings are invalid."
       return false
     end
 
@@ -130,19 +139,19 @@ class TorrentflowConfig
 
     @outEncPolicy = validateAndConvertEncPolicy(@outEncPolicy)
     if ! @outEncPolicy
-      SyslogWrapper.info "Error: the configuration file out_enc_policy setting is invalid"
+      $logger.error "The configuration file out_enc_policy setting is invalid"
       return false
     end
 
     @inEncPolicy = validateAndConvertEncPolicy(@inEncPolicy)
     if ! @inEncPolicy
-      SyslogWrapper.info "Error: the configuration file in_enc_policy setting is invalid"
+      $logger.error "The configuration file in_enc_policy setting is invalid"
       return false
     end
 
     @allowedEncLevel = validateAndConvertEncLevel(@allowedEncLevel)
     if ! @allowedEncLevel
-      SyslogWrapper.info "Error: the configuration file allowed_enc_level setting is invalid"
+      $logger.error "The configuration file allowed_enc_level setting is invalid"
       return false
     end
 
@@ -150,7 +159,7 @@ class TorrentflowConfig
     if @ratio
       f = @ratio.to_f
       if f != 0.0 && f < 1.0
-        SyslogWrapper.info "Error: the configuration file ratio setting is invalid. Ratio must be 0, or a number >= 1.0"
+        $logger.error "The configuration file ratio setting is invalid. Ratio must be 0, or a number >= 1.0"
         return false
       end
     else
@@ -159,7 +168,7 @@ class TorrentflowConfig
 
     @seedingTime = yaml['seedingtime']
     if ! @seedingTime.is_a?(Integer)
-      SyslogWrapper.info "Error: the configuration file seedingtime setting is invalid. It must be an integer"
+      $logger.error "The configuration file seedingtime setting is invalid. It must be an integer"
       return false  
     end
 
@@ -217,25 +226,61 @@ class TorrentflowConfig
       return false if ! validateInteger(@mongoPort, 'monthly_port')
     end
 
+    @logType = validateAndConvertLogType(yaml['log_type'], 'log_type')
+    return false if ! @logType
+
+    if @logType == :file
+      @logFile = yaml['log_file']
+      if ! @logFile
+        $logger.error "The configuration file log_file setting is missing"
+        return false
+      end
+      @logLevel = validateAndConvertLogLevel(yaml['log_level'], 'log_level')
+      return false if ! @logLevel
+      @logSize = yaml['log_size']
+      if @logSize
+        return false if ! validateInteger(@logSize, 'log_size')
+      else
+        $logger.error "The configuration file log_size setting is missing"
+        return false
+      end
+
+      @logCount = yaml['log_size']
+      if @logCount
+        return false if ! validateInteger(@logCount, 'log_size')
+      else
+        $logger.error "The configuration file log_size setting is missing"
+        return false
+      end
+    elsif @logType == :syslog
+      @logFacility = SyslogWrapper.facilityNameToConst(yaml['log_facility'])
+      if ! @logFacility
+        $logger.error "The configuration file log_facility setting is set to an invalid value: #{yaml['log_facility']} "
+      end
+    else
+      $logger.error "Unknown log type #{yaml['log_type']}"
+      return false
+    end
+
     true
   end 
   
   def validateDir(dir, settingName)
     dir.untaint
     if ! dir
-      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
       return false;
     elsif ! File.exists?(dir)
-      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
       return false;
     elsif ! File.directory?(dir)
-      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
       return false;
     elsif ! File.writable?(dir)
-      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
       return false;
     elsif ! File.readable?(dir)
-      SyslogWrapper.info "Error: the directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
       return false;
     end
   
@@ -270,7 +315,7 @@ class TorrentflowConfig
     if s.is_a?(Integer)
       true
     else
-      SyslogWrapper.info "Error: #{settingName} must be an integer but is '#{s}'"
+      $logger.error "#{settingName} must be an integer but is '#{s}'"
       false
     end
   end
@@ -279,8 +324,36 @@ class TorrentflowConfig
     if s.is_a?(TrueClass) || s.is_a?(FalseClass)
       true
     else
-      SyslogWrapper.info "Error: #{settingName} must be a boolean value (true/false) but is '#{s}'"
+      $logger.error "#{settingName} must be a boolean value (true/false) but is '#{s}'"
       false
+    end
+  end
+
+  def validateAndConvertLogType(type, settingName)
+    if type == 'file'
+      return :file
+    elsif type == 'syslog'
+      return :syslog
+    else
+      $logger.error "#{settingName} must be 'file' or 'syslog'"
+      return nil
+    end
+  end
+
+  def validateAndConvertLogLevel(level, settingName)
+    if level == "debug"
+      Logger::DEBUG
+    elsif level == "info"
+      Logger::INFO
+    elsif level == "warn"
+      Logger::WARN
+    elsif level == "error"
+      Logger::ERROR
+    elsif level == "fatal"
+      Logger::FATAL
+    else
+      $logger.error "#{settingName} must be debug, info, warn, error, or fatal"
+      nil
     end
   end
 end

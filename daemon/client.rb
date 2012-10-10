@@ -1,5 +1,14 @@
 #!/usr/bin/ruby
 
+# Setup the load path
+if ! File.directory?("daemon")
+  $stderr.puts "The daemon directory cannot be found. Make sure to run this script from the base installation directory, as 'daemon/client.rb'"
+  exit 1
+end
+if ! $:.include?("daemon")
+  $: << "daemon"
+end
+
 require 'daemonclient'
 require 'config'
 require 'UsageTracker'
@@ -16,7 +25,8 @@ commands =
   "graphdata" => "Get graph data for the named torrent",
   "listfiles" => "Get a list of files under the data dir. If an argument is passed, gets the files under that directory",
   "download" => "Download a file from under the data dir to /tmp. Full path is expected.",
-  "usage" => "Get network bandwidth volume usage. First argument should be 'daily' or 'monthly', second should be 'current' or 'all'. "
+  "usage" => "Get network bandwidth volume usage. First argument should be 'daily' or 'monthly', second should be 'current' or 'all'. ",
+  "alarms" => "Show currently raised alarms"
 }
 
 if ARGV.size <= 0 || !commands.has_key?(ARGV[0])
@@ -218,6 +228,24 @@ elsif ARGV[0] == "usage"
     if usage
       usage.each do |b|
         bucketPrinter.call(b)
+      end
+    else
+      puts "Operation failed: #{client.errorMsg}"
+    end
+  rescue
+    puts "Operation failed: #{$!}"
+    puts $!.backtrace.join("\n")
+  end
+elsif ARGV[0] == "alarms"
+  begin
+    alarms = client.getAlarms()
+    if alarms
+      if alarms.size > 0
+        alarms.each do |alarm|
+          puts "#{alarm.id}: #{alarm.message}"
+        end
+      else
+        puts "No alarms are currently raised"
       end
     else
       puts "Operation failed: #{client.errorMsg}"

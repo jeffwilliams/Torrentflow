@@ -57,16 +57,20 @@ FileUtils.cp_r "build/install.rb", packageDir
 
 libtorrentDir = "#{packageDir}/libtorrent"
 FileUtils.mkdir libtorrentDir
+FileUtils.mkdir "#{packageDir}/logs"
 FileUtils.cp "libtorrent/extconf.rb", libtorrentDir
 FileUtils.cp "libtorrent/libtorrent.cpp", libtorrentDir
 
 binDir = "#{packageDir}/bin"
 FileUtils.mkdir binDir
-makeBinScript(binDir, "daemon", "daemon") do |io|
-  io.puts "runCommand \'./daemon.rb\'"
+makeBinScript(binDir, "daemon", "") do |io|
+  io.puts "runCommand \'daemon/daemon.rb\'"
 end
-makeBinScript(binDir, "adduser", "daemon") do |io|
-  io.puts "runCommand \'./adduser.rb\'"
+makeBinScript(binDir, "adduser", "") do |io|
+  io.puts "runCommand \'daemon/adduser.rb\'"
+end
+makeBinScript(binDir, "client", "") do |io|
+  io.puts "runCommand \'daemon/client.rb\'"
 end
 makeBinScript(binDir, "appserver", "") do |io|
   io.puts "ENV['RACK_ENV'] = 'production'"

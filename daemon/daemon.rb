@@ -6,13 +6,25 @@
 # torrent status.
 #
 
-require 'SyslogWrapper'
+# Setup the load path
+if ! File.directory?("daemon")
+  $stderr.puts "The daemon directory cannot be found. Make sure to run this script from the base installation directory, as 'daemon/daemon.rb'"
+  exit 1
+end
+if ! $:.include?("daemon")
+  $: << "daemon"
+end
+
+require 'logging'
 require 'OptionHandler'
 require 'GenericTcpServer'
 require 'GenericTcpMessageHandler'
 require 'config'
 require 'requesthandler'
 require 'TestingRequestHandler'
+
+# Default logfile
+Logfile = "logs/daemon.log"
 
 # Become a daemon.
 def daemonize
@@ -44,7 +56,7 @@ def daemonize
 end
 
 def handleSignal
-  SyslogWrapper.info "Shutting down because of signal."
+  $logger.info "Shutting down because of signal."
   exit 0
 end
 
@@ -64,6 +76,9 @@ end
 
 $optDaemonize = true
 $optPort = nil
+
+# Set up initial logger
+$logger = makeFileLogger(Logfile, 5, 5000000)
 
 # Parse options
 def parseOptions
@@ -100,7 +115,7 @@ def parseConfig
   # Find config file
   configPath = TorrentflowConfig::findConfigFile
   if ! configPath
-    SyslogWrapper.info "Error: Can't locate config file #{TorrentflowConfig::TorrentConfigFilename}."
+    $logger.error "Can't locate config file #{TorrentflowConfig::TorrentConfigFilename}."
     exit 1
   end
 
@@ -118,6 +133,14 @@ if $optPort
   $config.listenPort = $optPort
 end
 
+# Adjust logger based on configuration settings
+if ( $config.logType == :file )
+  $logger = makeFileLogger($config.logFile, $config.logCount, $config.logSize)
+  $logger.level = $config.logLevel
+else
+  $logger = makeSyslogLogger("torrentflow-daemon", $config.logFacility)
+end
+
 # Set umask so that group has write permission.
 # This is so that mounted directories can be set up in such a way
 # that the user the daemon is running as can belong to a group that has
@@ -133,7 +156,7 @@ end
 File.umask(0002)
 
 daemonize if $optDaemonize
-SyslogWrapper.info "Started."
+$logger.info "Started."
 
 # Setup signal handlers
 Signal.trap('SIGINT'){ 
@@ -157,9 +180,9 @@ begin
       requestHandler.manage(clientSock, addr, port)
     }         
   ){ 
-    SyslogWrapper.info "Listening on port #{$config.listenPort}."
+    $logger.info "Listening on port #{$config.listenPort}."
   }
 rescue
-  SyslogWrapper.info "Got exception at top level: #{$!}"
-  SyslogWrapper.info "#{$!.backtrace.join("  ")}"
+  $logger.error "Got exception at top level: #{$!}"
+  $logger.error "#{$!.backtrace.join("  ")}"
 end
