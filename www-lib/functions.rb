@@ -1,6 +1,5 @@
 require 'daemonclient'
 require 'config'
-require 'SyslogWrapper'
 require 'json'
 
 SidCookieName = "rubytorrent_sid"

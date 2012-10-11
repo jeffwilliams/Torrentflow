@@ -1,16 +1,31 @@
 require 'yaml'
 require 'logging'
 
-class TorrentflowConfig
-  TorrentConfigFilename = "torrentflowdaemon.conf"
+class BaseConfig
+  # This function searches the RUBY loadpath to try and find the standard config file.
+  # If it's not found in the load path, the current directory, ../etc, etc/, and /etc/ are searched.
+  # If found it returns the full path, if not it returns nil.
+  def self.findConfigFile
 
-  def initialize
-    @listenPort = 3000
-    @seedingTime = 3600
-  end
+    $:.reverse.each{ |e|
+      path = "#{e}/#{configFileName}"
+      return path if File.exists? path
+    } 
   
+    if File.exists?(configFileName)
+      return configFileName
+    elsif File.exists?("../etc/#{configFileName}")
+      return Dir.pwd + "/../etc/#{configFileName}"
+    elsif File.exists?("etc/#{configFileName}")
+      return Dir.pwd + "/etc/#{configFileName}"
+    elsif File.exists?("/etc/#{configFileName}")
+      return "/etc/#{configFileName}"
+    end
+    nil
+  end
+
   # If dontValidateDirs is set, then the directories are not checked to 
-  # see if they exist, etc. This should be set to true by non-daemon code that '
+  # see if they exist, etc. This should be set to true by non-daemon code that 
   # is reading the config file.
   def load(filename, dontValidateDirs = false)
     rc = true
@@ -24,29 +39,123 @@ class TorrentflowConfig
     end
     rc
   end
-  
-  # This function searches the RUBY loadpath to try and find the standard config file.
-  # If it's not found in the load path, the current directory, ../etc, etc/, and /etc/ are searched.
-  # If found it returns the full path, if not it returns nil.
-  def self.findConfigFile
 
-    $:.reverse.each{ |e|
-      path = "#{e}/#{TorrentConfigFilename}"
-      return path if File.exists? path
-    } 
-  
-    if File.exists?(TorrentConfigFilename)
-      return TorrentConfigFilename
-    elsif File.exists?("../etc/#{TorrentConfigFilename}")
-      return Dir.pwd + "/../etc/#{TorrentConfigFilename}"
-    elsif File.exists?("etc/#{TorrentConfigFilename}")
-      return Dir.pwd + "/etc/#{TorrentConfigFilename}"
-    elsif File.exists?("/etc/#{TorrentConfigFilename}")
-      return "/etc/#{TorrentConfigFilename}"
-    end
-    nil
+  protected
+
+  # Subclasses must override
+  def self.configFileName
+    "config.conf"
   end
 
+  def handleYaml(yaml, dontValidateDirs)
+    true
+  end
+  
+  def validateDir(dir, settingName)
+    dir.untaint
+    if ! dir
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
+      return false;
+    elsif ! File.exists?(dir)
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
+      return false;
+    elsif ! File.directory?(dir)
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
+      return false;
+    elsif ! File.writable?(dir)
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
+      return false;
+    elsif ! File.readable?(dir)
+      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
+      return false;
+    end
+  
+    true    
+  end
+
+  def validateAndConvertEncPolicy(policy)
+    if policy == 'forced'
+      return :forced
+    elsif policy == 'enabled'
+      return :enabled
+    elsif policy == 'disabled'
+      return :disabled
+    else
+      return nil
+    end
+  end
+
+  def validateAndConvertEncLevel(level)
+    if level == 'plaintext'
+      return :plaintext
+    elsif level == 'rc4'
+      return :rc4
+    elsif level == 'both'
+      return :both
+    else
+      return nil
+    end
+  end
+
+  def validateInteger(s, settingName)
+    if s.is_a?(Integer)
+      true
+    else
+      $logger.error "#{settingName} must be an integer but is '#{s}'"
+      false
+    end
+  end
+
+  def validateBoolean(s, settingName)
+    if s.is_a?(TrueClass) || s.is_a?(FalseClass)
+      true
+    else
+      $logger.error "#{settingName} must be a boolean value (true/false) but is '#{s}'"
+      false
+    end
+  end
+
+  def validateAndConvertLogType(type, settingName)
+    if type == 'file'
+      return :file
+    elsif type == 'syslog'
+      return :syslog
+    else
+      $logger.error "#{settingName} must be 'file' or 'syslog'"
+      return nil
+    end
+  end
+
+  def validateAndConvertLogLevel(level, settingName)
+    if level == "debug"
+      Logger::DEBUG
+    elsif level == "info"
+      Logger::INFO
+    elsif level == "warn"
+      Logger::WARN
+    elsif level == "error"
+      Logger::ERROR
+    elsif level == "fatal"
+      Logger::FATAL
+    else
+      $logger.error "#{settingName} must be debug, info, warn, error, or fatal"
+      nil
+    end
+  end
+end
+
+class TorrentflowConfig < BaseConfig
+  TorrentConfigFilename = "torrentflowdaemon.conf"
+
+  def initialize
+    @listenPort = 3000
+    @seedingTime = 3600
+  end
+
+  def self.configFileName
+    TorrentConfigFilename
+  end
+  
   # Port to listen on
   attr_accessor :listenPort
 
@@ -102,7 +211,7 @@ class TorrentflowConfig
   attr_accessor :logCount
   attr_accessor :logFacility
 
-  private 
+  protected
   def handleYaml(yaml, dontValidateDirs = false)
     @listenPort = yaml['port'].to_i
     
@@ -265,95 +374,4 @@ class TorrentflowConfig
     true
   end 
   
-  def validateDir(dir, settingName)
-    dir.untaint
-    if ! dir
-      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is blank."
-      return false;
-    elsif ! File.exists?(dir)
-      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting does not exist."
-      return false;
-    elsif ! File.directory?(dir)
-      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not a directory."
-      return false;
-    elsif ! File.writable?(dir)
-      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not writable by #{ENV['USER']}."
-      return false;
-    elsif ! File.readable?(dir)
-      $logger.error "The directory '#{dir}' specified by the #{settingName} configuration file setting is not readable by #{ENV['USER']}."
-      return false;
-    end
-  
-    true    
-  end
-
-  def validateAndConvertEncPolicy(policy)
-    if policy == 'forced'
-      return :forced
-    elsif policy == 'enabled'
-      return :enabled
-    elsif policy == 'disabled'
-      return :disabled
-    else
-      return nil
-    end
-  end
-
-  def validateAndConvertEncLevel(level)
-    if level == 'plaintext'
-      return :plaintext
-    elsif level == 'rc4'
-      return :rc4
-    elsif level == 'both'
-      return :both
-    else
-      return nil
-    end
-  end
-
-  def validateInteger(s, settingName)
-    if s.is_a?(Integer)
-      true
-    else
-      $logger.error "#{settingName} must be an integer but is '#{s}'"
-      false
-    end
-  end
-
-  def validateBoolean(s, settingName)
-    if s.is_a?(TrueClass) || s.is_a?(FalseClass)
-      true
-    else
-      $logger.error "#{settingName} must be a boolean value (true/false) but is '#{s}'"
-      false
-    end
-  end
-
-  def validateAndConvertLogType(type, settingName)
-    if type == 'file'
-      return :file
-    elsif type == 'syslog'
-      return :syslog
-    else
-      $logger.error "#{settingName} must be 'file' or 'syslog'"
-      return nil
-    end
-  end
-
-  def validateAndConvertLogLevel(level, settingName)
-    if level == "debug"
-      Logger::DEBUG
-    elsif level == "info"
-      Logger::INFO
-    elsif level == "warn"
-      Logger::WARN
-    elsif level == "error"
-      Logger::ERROR
-    elsif level == "fatal"
-      Logger::FATAL
-    else
-      $logger.error "#{settingName} must be debug, info, warn, error, or fatal"
-      nil
-    end
-  end
 end

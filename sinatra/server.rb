@@ -11,21 +11,48 @@ end
 if ! $:.include?("daemon")
   $: << "daemon"
 end
+if ! $:.include?("sinatra")
+  $: << "sinatra"
+end
 
 require 'rubygems'
 require 'sinatra'
 require 'haml'
 require 'functions'
+require 'logger'
+require 'logging'
+require 'AppServerConfig'
 
 set :protection, :except => :session_hijacking
 
 # Enable session support in Sinatra
 enable :sessions
+disable :logging
 
 # If this is set to false, then users don't have to login to manage torrents
 AuthenticationEnabled = true
+LogFileName = "logs/sinatra.log"
+PidFile = "var/sinatra.pid"
 
-ConfigFileName = "torrentflowapp.conf"
+# Set up initial logger
+$logger = makeFileLogger(LogFileName, 5, 5000000)
+
+$appserverConfig = AppServerConfig.new
+def parseConfig
+  configPath = nil
+  
+  # Find config file
+  configPath = AppServerConfig::findConfigFile
+  if ! configPath
+    $logger.error "Can't locate config file #{AppServerConfig::TorrentConfigFilename}."
+    exit 1
+  end
+
+  if ! $appserverConfig.load(configPath)
+    $logger.error "Loading configuration file failed"
+    exit 1
+  end
+end
 
 # The $urlBasePath variable is used for handling reverse proxy setups where torrentflow
 # is not running in the root of the proxying server.
@@ -35,19 +62,43 @@ ConfigFileName = "torrentflowapp.conf"
 # to torrentflowapp.conf and Sinatra will behave like the application is running on /torrentflow.
 # Note that the files under public/ must also be moved to public/torrentflow for Sinatra to find them.
 $urlBasePath = ""
-filename = "#{settings.root}/#{ConfigFileName}"
-if File.exists?(filename)
-  File.open(filename) do |fh|
-    yaml = YAML::load(fh)
-  
-    $urlBasePath = yaml['pub_url_base_path']
-    if $urlBasePath
-      $urlBasePath += '/' if $urlBasePath !~ /\/$/
-    else
-      $urlBasePath = ""
+
+configure do
+  begin
+    parseConfig
+
+    $urlBasePath = $appserverConfig.urlBasePath
+    #file = File.open(LogFileName, "a")
+    # Use stdlib logger
+    #logger = Logger.new(file, 4, 1048576)
+    $logger = Logger.new($appserverConfig.logFile, $appserverConfig.logCount, $appserverConfig.logSize)
+    $logger.level = $appserverConfig.logLevel
+    def $logger.puts(s)
+      self.info s
     end
+    def $logger.write(s)
+      self.info s
+    end
+    def $logger.flush
+    end
+    if $appserverConfig.logRequests
+      use Rack::CommonLogger, $logger
+    end
+    $logger.info "Started"
+    # Write pid to var/
+    if File.exists?("var/")
+      begin
+        File.open(PidFile,"w") do |file|
+          file.puts Process.pid.to_s
+        end
+      rescue
+        $logger.error "Can't write pid to '#{PidFile}'. Continuing anyhow."
+      end
+    end
+  rescue
+    $logger.error "Setting up logger failed: #{$!}"
+    exit 1
   end
-  puts "Using a URL base application path of #{$urlBasePath} (application should be accessed as http://server/#{$urlBasePath}/)"
 end
 
 
