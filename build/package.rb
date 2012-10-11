@@ -39,10 +39,14 @@ end
 
 
 def cleanRepo?
-  `git status -s`.each_line do |line|  
-    status = line[0,2]
-    if status =~ /\?/ || status =~ /M/ || status =~ /A/
-      return false
+  `git status -s`.each_line do |line|
+    if line =~ /^(..) (.*)/
+      status = $1
+      filename = $2
+      if status =~ /\?/ || status =~ /M/ || status =~ /A/
+        # Ignore export/ and libtorrent/ files.
+        return false if filename !~ /^export/ && filename !~ /^libtorrent/
+      end
     end
   end
   true
