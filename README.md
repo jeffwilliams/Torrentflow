@@ -55,20 +55,24 @@ Installation
 2. In the installation directory run `./install.rb`.
 
 3. Edit the configuration file `etc/torrentflowdeamon.conf` and set appropriate settings for the 
-   parameters. If you are running multiple instances, make sure each uses a different TCP 
-   port number.
+   parameters. 
 
 4. Add at least one user using `bin/adduser <username>`. 
 
 Running
 -------
 
-1. Start the daemon by running `bin/daemon`.
+1. Start the daemon by running `bin/start-daemon`.
 
-2. Start the web application by running `bin/appserver`.
+2. Start the web application by running `bin/start-sinatra`.
 
-3. In your web browser open `http://host:4567/` where host is the server running the appserver. Log in using
+3. Log messages are written to `logs/daemon.log` and `logs/sinatra.log` by default. Check the logfiles 
+   for any errors.
+
+4. In your web browser open `http://host:4567/` where host is the server running the appserver. Log in using
    the username created in installation step 4.
+
+5. Stop the daemon and web application using `bin/stop-daemon` and `bin/stop-sinatra`
 
 Known Issues
 ------------
