@@ -54,6 +54,12 @@ if ! File.directory?(BuildDir)
   exit 1
 end
 
+
+puts "Building libtorrent extension"
+Dir.chdir("libtorrent") do
+  system("./extconf.rb")
+end
+
 begin
   FileUtils.rm_r ExportDir
 rescue
