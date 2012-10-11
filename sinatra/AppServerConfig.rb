@@ -50,6 +50,11 @@ class AppServerConfig < BaseConfig
     end
   
     @urlBasePath = yaml['url_path']
+    if @urlBasePath
+      @urlBasePath += '/' if @urlBasePath !~ /\/$/
+    else
+      @urlBasePath = ""
+    end
 
     true
   end
