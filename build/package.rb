@@ -38,6 +38,16 @@ def makeBinScript(path, filename, runDir, requires = [])
 end
 
 
+def cleanRepo?
+  `git status -s`.each_line do |line|  
+    status = line[0,2]
+    if status =~ /\?/ || status =~ /M/ || status =~ /A/
+      return false
+    end
+  end
+  true
+end
+
 # Setup the load path
 if ! File.directory?(BuildDir)
   $stderr.puts "Please run this script from the base source directory"
@@ -127,6 +137,11 @@ end
 
 
 archiveName = "torrentflow_#{version}.tar.gz"
+if ! cleanRepo?
+  puts "Warning: Repository is not clean (has untracked files, added files, modified files)."
+  archiveName = "torrentflow_UNCLEAN_#{version}.tar.gz"
+end
+
 archive = "#{ExportDir}/#{archiveName}"
 system "tar czf #{archive} -C '#{ExportDir}' #{versionDir}"
 
