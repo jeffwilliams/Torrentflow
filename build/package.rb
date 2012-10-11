@@ -76,6 +76,7 @@ versionDir = "torrentflow-#{version}"
 packageDir = "#{ExportDir}/#{versionDir}"
 FileUtils.mkdir packageDir
 
+FileUtils.cp_r "README.md", packageDir
 FileUtils.cp_r "daemon", packageDir
 FileUtils.cp_r "sinatra", packageDir
 FileUtils.cp_r "www", packageDir
