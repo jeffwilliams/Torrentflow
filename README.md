@@ -52,12 +52,15 @@ Installation
 
 1. Unpack the torrentflow archive to the desired installation path and unpack the archive. 
 
-2. In the installation directory run `./install.rb`.
+2. Install the dependencies (See appendix A for details)
 
-3. Edit the configuration file `etc/torrentflowdeamon.conf` and set appropriate settings for the 
+3. In the installation directory run `./install.rb`.
+
+4. Edit the configuration file `etc/torrentflowdeamon.conf` and set appropriate settings for the 
    parameters. 
 
-4. Add at least one user using `bin/adduser <username>`. 
+5. Add at least one user using `bin/adduser <username>`. 
+
 
 Running
 -------
@@ -74,7 +77,21 @@ Running
 
 5. Stop the daemon and web application using `bin/stop-daemon` and `bin/stop-sinatra`
 
+
 Known Issues
 ------------
 
 The Torrentflow website looks terrible in Internet Explorer.
+
+
+Appendix A: Installing Dependencies
+-----------------------------------
+
+To install ruby, g++, make, and libtorrent-rasterbar-dev you should use the package management
+system of your Linux distribution.
+
+To install the rubygems use the gem tool. For example to install sinatra, use:
+
+`sudo gem install sinatra`
+
+
