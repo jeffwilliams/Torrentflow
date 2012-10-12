@@ -102,6 +102,9 @@ end
 makeBinScript(binDir, "adduser", "") do |io|
   io.puts "runCommand \'daemon/adduser.rb\'"
 end
+makeBinScript(binDir, "deluser", "") do |io|
+  io.puts "runCommand \'daemon/deluser.rb\'"
+end
 makeBinScript(binDir, "client", "") do |io|
   io.puts "runCommand \'daemon/client.rb\'"
 end

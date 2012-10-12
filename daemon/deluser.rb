@@ -37,32 +37,13 @@ parseConfig
 
 auth = Authentication.new
 
-pass1 = nil
-pass2 = nil
-while true
-  print "Password: "
-  $stdout.flush
-  system "stty -echo"
-  pass1 = $stdin.gets.chop
-  puts ""
-  print "Password again: "
-  $stdout.flush
-  pass2 = $stdin.gets.chop
-  puts ""
-  system "stty echo"
-  if pass1 != pass2
-    puts "The passwords don't match. Please enter them again."
-  else
-    break
-  end
-end
-
-puts "Adding user #{ARGV[0]}"
+puts "Deleting user #{ARGV[0]}"
 begin
-  auth.addAccount(ARGV[0], pass1)
-  puts "User added"
+  auth.delAccount(ARGV[0])
+  puts "User deleted"
 rescue
   puts "#{$!}"
-  puts "User was not added"
+  puts "User was not deleted"
 end
+
 

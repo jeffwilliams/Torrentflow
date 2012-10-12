@@ -1,5 +1,6 @@
 require 'digest/md5'
 require 'thread'
+require 'fileutils'
 
 class Authentication
   class AccountInfo
@@ -57,6 +58,13 @@ class Authentication
     end
     addAccountInternal($config.passwordFile, login, unhashedPassword)
   end
+
+  def delAccount(login)
+    if ! @accounts.has_key?(login)
+      raise "The account #{login} does not exist"
+    end
+    delAccountInternal($config.passwordFile, login)
+  end
   
   # Start a new session for the specified user.
   # Returns the session id on success, nil on failure.
@@ -107,6 +115,18 @@ class Authentication
       file.puts "#{login}:#{acct.passwordhash}:#{salt}"
     }
     @accounts[login] = acct
+  end
+
+  def delAccountInternal(filename, login)
+    tmpfile = "#{filename}.new"
+    File.open(tmpfile, "w"){ |outfile|
+      File.open(filename, "r"){ |infile|
+        infile.each_line { |line|
+          outfile.print line if line !~ /^#{login}:/
+        }
+      }
+    }
+    FileUtils.mv tmpfile, filename
   end
 
   def hashPassword(pass, salt)
