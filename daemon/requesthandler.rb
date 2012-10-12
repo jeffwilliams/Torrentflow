@@ -1120,7 +1120,9 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   def processNewAlerts
     @session.alerts.each{ |alert|
       if alert.is_a? Libtorrent::TorrentAlert
-       addToHashList @torrentAlerts, alert.handle.name, alert
+        if alert.handle.valid? && alert.handle.has_metadata
+          addToHashList @torrentAlerts, alert.handle.name, alert
+        end
       else
         @globalAlerts.push alert
         # For now since nothing is reading the alerts, just store a max of 
