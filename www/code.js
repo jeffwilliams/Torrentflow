@@ -295,7 +295,7 @@ function modifyTorrentsUsingAjax(torrentNameList, operation, onComplete)
   params["operation"] = operation;
   for(var i = 0; i < torrentNameList.length; i++)
   {
-    params["check" + torrentNameList[i]] = torrentNameList[i];
+    params["check" + i] = torrentNameList[i];
   }
 
   // MODIFY_FILES_URL is defined externally
@@ -799,7 +799,7 @@ function setRowValues(row, torrentInfo)
       var children = tds[td].childNodes;
       for( var n = 0; n < tds[td].childNodes.length; n++)
       {
-        children[n].setAttribute("name", 'check' + torrentInfo['name']);
+        children[n].setAttribute("name", 'check' + n);
       }
     }
   
