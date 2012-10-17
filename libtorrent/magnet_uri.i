@@ -20,7 +20,9 @@
   }
 %}
 
+#if LIBTORRENT_VERSION_MINOR < 16
 namespace libtorrent
 {
   torrent_handle add_magnet_uri(session& ses, std::string const& uri, std::string const& save_path, std::string name = NULL);
 }
+#endif

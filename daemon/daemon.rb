@@ -145,6 +145,7 @@ terminateRequestHandler = Proc.new{
 }
 
 begin
+  $logger.debug "Creating RasterbarLibtorrentRequestHandler..."
   requestHandler = RasterbarLibtorrentRequestHandler.new(terminateRequestHandler)
   #requestHandler = TestingRequestHandler.new(terminateRequestHandler)
   genericServer.start( 

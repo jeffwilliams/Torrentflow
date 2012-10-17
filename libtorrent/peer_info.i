@@ -41,7 +41,7 @@ namespace libtorrent {
     unsigned int flags;
 #if LIBTORRENT_VERSION_MINOR == 13  
     asio::ip::tcp::endpoint ip;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::tcp::endpoint ip;
 #endif
     float up_speed;
@@ -53,7 +53,7 @@ namespace libtorrent {
     peer_id pid;
 #if LIBTORRENT_VERSION_MINOR == 13  
     std::vector<bool> pieces;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     libtorrent::bitfield pieces;
 #endif
     bool seed;

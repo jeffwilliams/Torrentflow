@@ -57,7 +57,7 @@ namespace libtorrent {
     %rename("download_rate_limit") download_limit() const;
     int download_limit() const;
 
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
     %rename("auto_managed=") auto_managed(bool m) const;
     void auto_managed(bool m) const;
 #endif
@@ -65,7 +65,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13  
     void set_peer_upload_limit(asio::ip::tcp::endpoint ip, int limit) const;
     void set_peer_download_limit(asio::ip::tcp::endpoint ip, int limit) const;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     void set_peer_upload_limit(boost::asio::ip::tcp::endpoint ip, int limit) const;
     void set_peer_download_limit(boost::asio::ip::tcp::endpoint ip, int limit) const;
 #endif
@@ -82,7 +82,11 @@ namespace libtorrent {
     void set_tracker_login(std::string const& name , std::string const& password) const;
 
     boost::filesystem::path save_path() const;
+#if LIBTORRENT_VERSION_MINOR <= 15
     void move_storage(boost::filesystem::path const& save_path) const;
+#elif LIBTORRENT_VERSION_MINOR > 15
+    void move_storage(std::string const& save_path) const;
+#endif
     const sha1_hash& info_hash() const;
 
     %exception;

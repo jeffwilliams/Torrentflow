@@ -70,47 +70,52 @@ class RequestHandler
 
   # Returns a response to send
   def handle(req)
-    if req.is_a? DaemonListTorrentsRequest
-      handleListTorrentsRequest req
-    elsif req.is_a? DaemonAddTorrentRequest
-      handleAddTorrentsRequest req
-    elsif req.is_a? DaemonDelTorrentRequest
-      handleDelTorrentsRequest req
-    elsif req.is_a? DaemonGetTorrentRequest
-      handleGetTorrentRequest req
-    elsif req.is_a? DaemonTerminateRequest
-      handleTerminateRequest req
-    elsif req.is_a? DaemonLoginRequest
-      handleLoginRequest req
-    elsif req.is_a? DaemonAuthSessionRequest
-      handleAuthSessionRequest req
-    elsif req.is_a? DaemonLogoutRequest
-      handleLogoutRequest req
-    elsif req.is_a? DaemonPauseTorrentRequest
-      handlePauseRequest req
-    elsif req.is_a? DaemonGetAlertsRequest
-      handleGetAlertsRequest req
-    elsif req.is_a? DaemonFsInfoRequest
-      handleFsInfoRequest req
-    elsif req.is_a? DaemonGraphInfoRequest
-      handleGraphInfoRequest req
-    elsif req.is_a? DaemonListFilesRequest
-      handleListFilesRequest req
-    elsif req.is_a? DaemonDownloadFileRequest
-      handleDownloadFileRequest req
-    elsif req.is_a? DaemonDelFileRequest
-      handleDelFileRequest req
-    elsif req.is_a? DaemonGetTvShowSummaryRequest
-      handleGetTvShowSummaryResponse req
-    elsif req.is_a? DaemonGetMagnetRequest
-      handleGetMagnetRequest req
-    elsif req.is_a? DaemonGetUsageRequest
-      handleGetUsageRequest req
-    elsif req.is_a? DaemonGetAlarmsRequest
-      handleGetAlarmsRequest req
-    else
-      $logger.warn "Got an unknown request type #{req.class}"
-      nil
+    begin
+      if req.is_a? DaemonListTorrentsRequest
+        handleListTorrentsRequest req
+      elsif req.is_a? DaemonAddTorrentRequest
+        handleAddTorrentsRequest req
+      elsif req.is_a? DaemonDelTorrentRequest
+        handleDelTorrentsRequest req
+      elsif req.is_a? DaemonGetTorrentRequest
+        handleGetTorrentRequest req
+      elsif req.is_a? DaemonTerminateRequest
+        handleTerminateRequest req
+      elsif req.is_a? DaemonLoginRequest
+        handleLoginRequest req
+      elsif req.is_a? DaemonAuthSessionRequest
+        handleAuthSessionRequest req
+      elsif req.is_a? DaemonLogoutRequest
+        handleLogoutRequest req
+      elsif req.is_a? DaemonPauseTorrentRequest
+        handlePauseRequest req
+      elsif req.is_a? DaemonGetAlertsRequest
+        handleGetAlertsRequest req
+      elsif req.is_a? DaemonFsInfoRequest
+        handleFsInfoRequest req
+      elsif req.is_a? DaemonGraphInfoRequest
+        handleGraphInfoRequest req
+      elsif req.is_a? DaemonListFilesRequest
+        handleListFilesRequest req
+      elsif req.is_a? DaemonDownloadFileRequest
+        handleDownloadFileRequest req
+      elsif req.is_a? DaemonDelFileRequest
+        handleDelFileRequest req
+      elsif req.is_a? DaemonGetTvShowSummaryRequest
+        handleGetTvShowSummaryResponse req
+      elsif req.is_a? DaemonGetMagnetRequest
+        handleGetMagnetRequest req
+      elsif req.is_a? DaemonGetUsageRequest
+        handleGetUsageRequest req
+      elsif req.is_a? DaemonGetAlarmsRequest
+        handleGetAlarmsRequest req
+      else
+        $logger.warn "Got an unknown request type #{req.class}"
+        nil
+      end
+    rescue
+      $logger.error "Got an exception when handling a request: #{$!}"
+      $logger.error "#{$!.backtrace.join("  ")}"
     end
   end
 
@@ -511,9 +516,12 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     # Maps the name of the torrent (from torrent_info) to our own RubyTorrentInfo object that contains
     # extra information about the torrent not stored by libtorrent
     @torrentInfo = {}
+    $logger.debug "RasterbarLibtorrentRequestHandler: creating session"
     @session = Libtorrent::Session.new
+    $logger.debug "RasterbarLibtorrentRequestHandler: listening on port #{$config.torrentPortLow}"
     @session.listen_on($config.torrentPortLow, $config.torrentPortLow)
 
+    $logger.debug "RasterbarLibtorrentRequestHandler: setting encryption settings"
     # Set up the encryption settings
     peSettings = Libtorrent::PeSettings.new
     peSettings.out_enc_policy = convertEncPolicy($config.outEncPolicy)
@@ -527,6 +535,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
         path = "#{$config.torrentFileDir}/#{file}"
         next if ! File.file?(path)
         begin
+          $logger.debug "RasterbarLibtorrentRequestHandler: adding torrent #{path}"
           loadAndAddTorrent(path, file)
         rescue
           $logger.error "Failed to load #{path}: it is not a valid torrent: #{$!}"
@@ -590,6 +599,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
 
   protected
   def handleListTorrentsRequest(req)
+    $logger.debug "handleListTorrentsRequest called"
     resp = DaemonListTorrentsResponse.new
 
     torrentHandles = @session.torrents
@@ -657,6 +667,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleAddTorrentsRequest(req)
+    $logger.debug "handleAddTorrentsRequest called"
     resp = DaemonAddTorrentResponse.new
     # Add this torrent which exists in the torrentsdir to our session
     if File.exists? req.filepath
@@ -677,11 +688,19 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGetMagnetRequest(req)
+    $logger.debug "handleGetMagnetRequest called"
     begin
       resp = DaemonGetMagnetResponse.new
       # Add this magnet uri to the session
       tempName = @magnetTempNameMgr.newName
-      handle = Libtorrent::add_magnet_uri(@session, req.sourcePath, $config.dataDir, tempName)
+      if @session.respond_to?(:add_torrent_url)
+        $logger.debug "handleGetMagnetRequest: calling Session.add_torrent_url (for libtorrent >= 0.16) "
+        # Newer versions of libtorrent have depricated add_magnet_uri
+        handle = @session.add_torrent_url(req.sourcePath, $config.dataDir);
+      else
+        $logger.debug "handleGetMagnetRequest: calling Libtorrent::add_magnet_uri (for libtorrent < 0.16) "
+        handle = Libtorrent::add_magnet_uri(@session, req.sourcePath, $config.dataDir, tempName)
+      end
       if ! handle.valid?
         $logger.error "handleGetMagnetRequest: handle returned is invalid"
         resp.successful = false
@@ -689,22 +708,30 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
       else
         # We need to wait until metadata is downloaded before using the torrent handle.
         Thread.new{
-          tries = 600
-          while ! handle.has_metadata && tries > 0
-            sleep 1
-            tries -= 1
-          end
-          if ! handle.has_metadata
-            $logger.error "handleGetMagnetRequest: Could never get metadata for magnet link #{tempName} ('#{req.sourcePath}'). Removing torrent."
-            @session.remove_torrent(handle, Libtorrent::Session::DELETE_FILES)
-          else
-            adjustTorrentHandle(handle, handle.info, "Magnet File")
+          begin
+            tries = 600
+            while ! handle.has_metadata && tries > 0
+              sleep 1
+              tries -= 1
+            end
+            if ! handle.has_metadata
+              $logger.error "handleGetMagnetRequest: Could never get metadata for magnet link #{tempName} ('#{req.sourcePath}'). Removing torrent."
+              @session.remove_torrent(handle, Libtorrent::Session::DELETE_FILES)
+            else
+              adjustTorrentHandle(handle, handle.info, "Magnet File")
+            end
+          rescue
+            $logger.error "Got an exception when waiting for magnet link metadata: #{$!}"
+            $logger.error "#{$!.backtrace.join("  ")}"
+            $logger.error "Magnet torrent was probably deleted from session while we were holding the handle."
           end
           @magnetTempNameMgr.freeName(tempName)
         }
       end
       $logger.info "handleGetMagnetRequest: Add completed"
     rescue
+      $logger.error "handleGetMagnetRequest: Got exception: #{$!}"
+      $logger.error "#{$!.backtrace.join("  ")}"
       resp.successful = false
       resp.errorMsg = $!.to_s
     end
@@ -712,9 +739,11 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleDelTorrentsRequest(req)
+    $logger.debug "handleDelTorrentsRequest called"
     resp = DaemonDelTorrentResponse.new
     i = findTorrentHandle(req.torrentName)
     if ! i
+      $logger.debug "handleDelTorrentsRequest: Couldn't find handle for torrent '#{req.torrentName}'"
       resp.successful = false
       resp.errorMsg = "No such torrent"
       return resp
@@ -750,6 +779,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGetTorrentRequest(req)
+    $logger.debug "handleGetTorrentRequest called"
     resp = DaemonGetTorrentResponse.new
     if req.filetype == :disk
       destpath = $config.torrentFileDir
@@ -798,6 +828,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleTerminateRequest(req)
+    $logger.debug "handleTerminateRequest called"
     $logger.info "Terminating at user request."
     resp = DaemonTerminateResponse.new
     resp.successful = true
@@ -806,6 +837,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleLoginRequest(req)
+    $logger.debug "handleLoginRequest called"
     resp = DaemonLoginResponse.new
     resp.successful = @authentication.authorize(req.login, req.password)
     if resp.successful
@@ -820,21 +852,28 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleLogoutRequest(req)
+    $logger.debug "handleLogoutRequest called"
     resp = DaemonLogoutResponse.new
     @authentication.endSession(req.sid)
     resp
   end
 
   def handleAuthSessionRequest(req)
+    $logger.debug "handleAuthSessionRequest called"
     resp = DaemonAuthSessionResponse.new
     resp.successful = @authentication.validSession?(req.sid)
     resp
   end
 
   def handlePauseRequest(req)
+    $logger.debug "handlePauseRequest called"
     resp = DaemonPauseTorrentResponse.new
     handle = findTorrentHandle(req.torrentName)
-    return resp if ! handle
+    if ! handle
+      $logger.debug "handlePauseTorrentsRequest: Couldn't find handle for torrent '#{req.torrentName}'"
+      resp.successful = false
+      return resp 
+    end
 
     if handle.paused?
       if handle.respond_to?(:auto_managed=)
@@ -851,6 +890,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGetAlertsRequest(req)
+    $logger.debug "handleGetAlertsRequest called"
     processNewAlerts
 
     list = nil
@@ -874,6 +914,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleFsInfoRequest(req)
+    $logger.debug "handleFsInfoRequest called"
     resp = DaemonFsInfoResponse.new
     # Cache the output of df -h, just in case it is network storage.
     if ( ! @cachedDf || (@cachedDfTimeout && @cachedDfTimeout < Time.new))
@@ -899,6 +940,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGraphInfoRequest(req)
+    $logger.debug "handleGraphInfoRequest called"
     resp = DaemonGraphInfoResponse.new
     info = @torrentInfo[req.torrentId] 
     if ! info
@@ -922,6 +964,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleListFilesRequest(req)
+    $logger.debug "handleListFilesRequest called"
     resp = DaemonListFilesResponse.new
     absDataDir = Pathname.new($config.dataDir).realpath.to_s
     # If the dir specified is nil, then assume the request is for the datadir.
@@ -977,6 +1020,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   # This method sends the file as a stream using the TcpStreamHandler 
   # on success. On error, a 0-length stream is sent.
   def handleDownloadFileRequest(req)
+    $logger.debug "handleDownloadFileRequest called"
     begin
       # Make sure we don't download files outside of the data dir
       return StreamMessage.new(0, nil) if ! pathIsUnderDataDir(req.path)
@@ -995,6 +1039,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleDelFileRequest(req)
+    $logger.debug "handleDelFileRequest called"
     resp = DaemonListFilesResponse.new
     # Make sure we don't download files outside of the data dir
     if pathIsUnderDataDir req.path
@@ -1012,6 +1057,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGetTvShowSummaryResponse(req)
+    $logger.debug "handleGetTvShowSummaryResponse called"
     resp = DaemonGetTvShowSummaryResponse.new
 
     interp = ShowNameInterpreter.new
@@ -1027,6 +1073,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGetUsageRequest(req)
+    $logger.debug "handleGetUsageRequest called"
     resp = DaemonGetUsageResponse.new
     if ! $config.enableUsageTracking
       resp.successful = false
@@ -1059,6 +1106,7 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
   end
 
   def handleGetAlarmsRequest(req)
+    $logger.debug "handleGetAlarmsRequest called"
     resp = DaemonGetAlarmsResponse.new
     @alarms.each_value do |value|
       resp.alarms.push value

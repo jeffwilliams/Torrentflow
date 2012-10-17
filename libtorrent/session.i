@@ -26,7 +26,7 @@ namespace libtorrent
       delete_files = 1
     };
 
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
     %rename("alertMask=") set_alert_mask(int m);
     void set_alert_mask(int m);
 #endif
@@ -58,7 +58,26 @@ namespace libtorrent
           rb_raise(rb_eStandardError, "add_torrent failed: %s", e.what());
         }
       }
-        
+
+      
+#if LIBTORRENT_VERSION_MINOR >= 16
+      /* For downloading magnet links */
+      torrent_handle add_torrent_url(
+        const char* url,
+        const char* save_path
+      )
+      {
+        libtorrent::add_torrent_params params;
+        params.url = url;
+        params.save_path = save_path;
+        try {
+          return self->add_torrent( params );
+        } catch (libtorrent::libtorrent_exception e) {
+          rb_raise(rb_eStandardError, "add_torrent failed: %s", e.what());
+        }
+      }
+#endif
+
       VALUE torrents() {
         VALUE array = rb_ary_new();
         std::vector<libtorrent::torrent_handle> tv = self->get_torrents();
@@ -156,29 +175,6 @@ namespace libtorrent
         return array;
       }
     }
-
-/*
-    // all torrent_handles must be destructed before the session is destructed!
-    torrent_handle add_torrent(
-      torrent_info const& ti
-      , fs::path const& save_path
-      , entry const& resume_data = entry()
-      , storage_mode_t storage_mode = storage_mode_sparse
-      , bool paused = false
-      , storage_constructor_type sc = default_storage_constructor) TORRENT_DEPRECATED;
-*/
-/*
-    torrent_handle add_torrent(
-      char const* tracker_url
-      , sha1_hash const& info_hash
-      , char const* name
-      , fs::path const& save_path
-      , entry const& resume_data = entry()
-      , storage_mode_t storage_mode = storage_mode_sparse
-      , bool paused = false
-      , storage_constructor_type sc = default_storage_constructor
-      , void* userdata = 0);
-*/
 
   };
 }

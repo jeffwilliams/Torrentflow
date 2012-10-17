@@ -19,7 +19,7 @@ namespace libtorrent {
     %rename("FINISHED") finished;
     %rename("SEEDING") seeding;
     %rename("ALLOCATING") allocating;
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
     %rename("CHECKING_RESUME_DATA") checking_resume_data;
 #endif
     enum state_t
@@ -34,7 +34,7 @@ namespace libtorrent {
       finished,
       seeding,
       allocating
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
       ,checking_resume_data
 #endif
     };
@@ -67,8 +67,7 @@ namespace libtorrent {
 
 #if LIBTORRENT_VERSION_MINOR == 13  
     const std::vector<bool>* pieces;
-#endif
-#if LIBTORRENT_VERSION_MINOR == 14
+#ifif LIBTORRENT_VERSION_MINOR >= 14
     bitfield pieces;
 #endif 
 

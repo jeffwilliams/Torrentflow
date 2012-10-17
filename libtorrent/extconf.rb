@@ -17,32 +17,37 @@ if File.exists?("Makefile")
 end
 
 
-dir_config("libtorrent", "/usr/include/libtorrent", "/usr/lib")
+idir, ldir = dir_config("libtorrent", "/usr/include", "/usr/lib")
 have_library("torrent-rasterbar")
+pkg_config("libtorrent-rasterbar")
 
 # Check libtorrent version
-version = `pkg-config --modversion libtorrent-rasterbar`
-libtorrentMajor = nil
-libtorrentMinor = nil
-if version =~ /([^\.]+)\.([^\.]+)\..*/
-  libtorrentMajor = $1.to_i
-  libtorrentMinor = $2.to_i
-  puts "libtorrent-rasterbar version: #{libtorrentMajor}.#{libtorrentMinor}"
+libtorrentVersion = [-1,-1,-1]
+File.open("#{idir}/libtorrent/version.hpp","r") do |file|
+  file.each_line do |line|
+    if line =~ /define\s+LIBTORRENT_VERSION_MAJOR\s+(\d+)/
+      libtorrentVersion[0] = $1.to_i
+    elsif line =~ /define\s+LIBTORRENT_VERSION_MINOR\s+(\d+)/
+      libtorrentVersion[1] = $1.to_i
+    elsif line =~ /define\s+LIBTORRENT_VERSION_TINY\s+(\d+)/
+      libtorrentVersion[2] = $1.to_i
+    end
+  end
 end
-
-if !libtorrentMajor || !libtorrentMinor
-  puts "Parsing libtorrent version using pkg-config failed."
+if libtorrentVersion.reduce(0){ |memo, n| memo < 0 || n < 0 ? -1 : 0 } < 0
+  puts "Can't determine libtorrent version. Got #{libtorrentVersion.join(".")}"
   exit 1
 end
+puts "libtorrent version #{libtorrentVersion.join(".")}"
 
-if libtorrentMajor != 0 || libtorrentMinor < 14
-  puts "RubyTorrent only supports libtorrent 0.14 or higher."
+if libtorrentVersion[0] != 0 || libtorrentVersion[1] < 14 || libtorrentVersion[1] > 16
+  puts "RubyTorrent only supports libtorrent 0.14 - 0.16."
   exit 1
 end
 
 if ! File.exists?("libtorrent.cpp") || dependenciesModifiedSince?(File.mtime("libtorrent.cpp"))
   swig = find_executable('swig')
-  swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentMinor}"
+  swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentVersion[1]}"
   print "Generating C++ wrapper file..."
   if ! system("./runswig.rb #{swig} #{swigOpts}")
     puts "Failed!"
@@ -50,7 +55,6 @@ if ! File.exists?("libtorrent.cpp") || dependenciesModifiedSince?(File.mtime("li
   end
   puts "Done"
 end
-
 
 # When make distclean is run, remove the swig generated sourcefile
 $distcleanfiles << "libtorrent.cpp"

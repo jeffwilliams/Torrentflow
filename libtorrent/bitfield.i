@@ -1,12 +1,12 @@
 %{
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
 #include "libtorrent/bitfield.hpp"
 #endif
 %}
 
 namespace libtorrent {
 
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
   struct bitfield
   {
     bool get_bit(int index) const;

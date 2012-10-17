@@ -1,5 +1,5 @@
 %{
-#include "file_storage.hpp"
+#include "libtorrent/file_storage.hpp"
 #include "libtorrent/storage.hpp"
 %}
 
@@ -42,7 +42,11 @@ namespace libtorrent
 		// may throw file_error if storage for slot hasn't been allocated
 		virtual void write(const char* buf, int slot, int offset, int size) = 0;
 
+#if LIBTORRENT_VERSION_MINOR <= 15
 		virtual bool move_storage(boost::filesystem::path save_path) = 0;
+#elif LIBTORRENT_VERSION_MINOR > 15
+    virtual bool move_storage(std::string const& save_path) = 0;
+#endif
 
 		// write storage dependent fast resume entries
 		virtual void write_resume_data(entry& rd) const = 0;
@@ -56,9 +60,6 @@ namespace libtorrent
 		// swaps the puts the data in slot1 in slot2, the data in slot2
 		// in slot3 and the data in slot3 in slot1
 		virtual void swap_slots3(int slot1, int slot2, int slot3) = 0;
-
-		// returns the sha1-hash for the data at the given slot
-		virtual sha1_hash hash_for_slot(int slot, partial_hash& h, int piece_size) = 0;
 
 		// this will close all open files that are opened for
 		// writing. This is called when a torrent has finished
@@ -75,8 +76,5 @@ namespace libtorrent
 	typedef storage_interface* (*storage_constructor_type)( boost::intrusive_ptr<torrent_info const>, boost::filesystem::path const&, file_pool&);
 
   struct file_pool;
-
-  storage_interface* default_storage_constructor(
-    file_storage const&, file_storage const* mapped, boost::filesystem::path const&, file_pool&);
 
 }

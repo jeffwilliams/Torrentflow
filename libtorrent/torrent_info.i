@@ -2,13 +2,18 @@
 #include <sstream>
 #include "libtorrent/torrent_info.hpp"
 #include "boost/filesystem/operations.hpp"
+#include "stdio.h"
 %}
 
 namespace libtorrent {
 
   struct file_entry
   {
+#if LIBTORRENT_VERSION_MINOR <= 15
     boost::filesystem::path path;
+#elif LIBTORRENT_VERSION_MINOR > 15
+    std::string path;
+#endif
     size_type offset;
     size_type size;
   };
@@ -41,7 +46,12 @@ namespace libtorrent {
 
     void add_tracker(std::string const& url, int tier = 0);
     void add_url_seed(std::string const& url);
+
+#if LIBTORRENT_VERSION_MINOR < 16
     boost::optional<boost::posix_time::ptime> creation_date() const;
+#elif LIBTORRENT_VERSION_MINOR >= 16
+    boost::optional<time_t> creation_date() const;
+#endif
 
     std::vector<file_slice> map_block(int piece, size_type offset, int size) const;
     peer_request map_file(int file, size_type offset, int size) const;
@@ -89,18 +99,34 @@ namespace libtorrent {
 
       VALUE files() const {
         VALUE array = rb_ary_new();
-        for (libtorrent::torrent_info::file_iterator i = self->begin_files();
-             i != self->end_files(); ++i)
+        for(int i = 0; i < self->num_files(); i++)
         {
-          VALUE rubyString = rb_str_new(i->path.string().c_str(), i->path.string().length());
+#if LIBTORRENT_VERSION_MINOR <= 15
+          VALUE rubyString = rb_str_new(self->file_at(i).path.string().c_str(), self->file_at(i).path.string().length());
+#elif LIBTORRENT_VERSION_MINOR > 15
+          VALUE rubyString = rb_str_new(self->file_at(i).path.c_str(), self->file_at(i).path.length());
+#endif
           if (rubyString != Qnil) rb_ary_push(array, rubyString);
         }
+
         return array;
       }
 
       static libtorrent::torrent_info load(const char* path) const {
         try {
-          return libtorrent::torrent_info(load_entry(path));
+          /* return libtorrent::torrent_info(load_entry(path)); */
+#if LIBTORRENT_VERSION_MINOR < 16
+            return libtorrent::torrent_info(boost::filesystem::path(path));
+#elif LIBTORRENT_VERSION_MINOR >= 16
+            std::string strpath(path);
+FILE* file = fopen("/tmp/debug","w");
+if ( file ) {
+  fprintf(file, "path: '%s'\n", strpath.c_str());
+}
+fclose(file);
+            return libtorrent::torrent_info(strpath);
+#endif
+        
         } 
         catch(libtorrent::invalid_torrent_file)
         {
@@ -112,10 +138,6 @@ namespace libtorrent {
         }  
       }
 
-      static libtorrent::torrent_info load_bytes(const std::string bytes) const {
-        std::istringstream in(bytes);
-        return libtorrent::torrent_info(load_entry(in));
-      }
     }
 
   };

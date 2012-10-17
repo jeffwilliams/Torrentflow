@@ -22,7 +22,7 @@ namespace libtorrent {
     %rename("NONE") none;
     enum severity_t { debug, info, warning, critical, fatal, none };
 
-#if LIBTORRENT_VERSION_MINOR == 14
+#if LIBTORRENT_VERSION_MINOR >= 14
     %rename("ERROR_NOTIFICATION") error_notification;
     %rename("PEER_NOTIFICATION") peer_notification;
     %rename("PORT_MAPPING_NOTIFICATION") port_mapping_notification;
@@ -34,6 +34,13 @@ namespace libtorrent {
     %rename("IP_BLOCK_NOTIFICATION") ip_block_notification;
     %rename("PERFORMANCE_WARNING") performance_warning;
     %rename("ALL_CATEGORIES") all_categories;
+# if LIBTORRENT_VERSION_MINOR >= 15
+    %rename("DHT_NOTIFICATION") dht_notification;
+    %rename("STATS_NOTIFICATION") stats_notification;
+#   if LIBTORRENT_VERSION_MINOR >= 16
+    %rename("RSS_NOTIFICATION") rss_notification;
+#   endif  
+# endif
       
     enum category_t
     {
@@ -47,6 +54,13 @@ namespace libtorrent {
       progress_notification = 0x80,
       ip_block_notification = 0x100,
       performance_warning = 0x200,
+# if LIBTORRENT_VERSION_MINOR >= 15
+      dht_notification = 0x400,
+      stats_notification = 0x800,
+#   if LIBTORRENT_VERSION_MINOR >= 16
+      rss_notification = 0x1000,
+#   endif
+# endif
       all_categories = 0xffffffff
     };
 #endif
@@ -55,7 +69,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13  
     %rename("message") msg() const;
     const std::string& msg() const;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     virtual std::string message() const = 0;
 #endif
     severity_t severity() const;
@@ -96,7 +110,7 @@ namespace libtorrent {
     tracker_warning_alert(torrent_handle const& h
       , std::string const& msg)
       : torrent_alert(h, alert::warning, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     tracker_warning_alert(torrent_handle const& h
       , std::string const& url_
       , std::string const& msg_);
@@ -124,7 +138,7 @@ namespace libtorrent {
     scrape_failed_alert(torrent_handle const& h
       , std::string const& msg)
       : torrent_alert(h, alert::warning, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     scrape_failed_alert(torrent_handle const& h
       , std::string const& url_
       , std::string const& msg_)
@@ -150,7 +164,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13
     tracker_announce_alert(torrent_handle const& h, std::string const& msg)
       : torrent_alert(h, alert::info, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     tracker_announce_alert(torrent_handle const& h
       , std::string const& url_, int event_)
       : tracker_alert(h, url_)
@@ -168,7 +182,7 @@ namespace libtorrent {
       , std::string const& msg)
       : torrent_alert(h, alert::info, msg)
       , piece_index(index);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     hash_failed_alert(
       torrent_handle const& h
       , int index)
@@ -185,7 +199,7 @@ namespace libtorrent {
     peer_ban_alert(asio::ip::tcp::endpoint const& pip, torrent_handle h, std::string const& msg)
       : torrent_alert(h, alert::info, msg)
       , ip(pip);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     peer_ban_alert(torrent_handle h, asio::ip::tcp::endpoint const& ip
       , peer_id const& pid)
       : peer_alert(h, ip, pid);
@@ -193,7 +207,7 @@ namespace libtorrent {
 
 #if LIBTORRENT_VERSION_MINOR == 13
     asio::ip::tcp::endpoint ip;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::tcp::endpoint ip;
 #endif
   };
@@ -206,7 +220,7 @@ namespace libtorrent {
       : alert(alert::debug, msg)
       , ip(pip)
       , pid(pid_);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     peer_error_alert(torrent_handle const& h, tcp::endpoint const& ip
       , peer_id const& pid, std::string const& msg_)
       : peer_alert(h, ip, pid)
@@ -215,7 +229,7 @@ namespace libtorrent {
 
 #if LIBTORRENT_VERSION_MINOR == 13
     asio::ip::tcp::endpoint ip;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::tcp::endpoint ip;
 #endif
     peer_id pid;
@@ -235,7 +249,7 @@ namespace libtorrent {
       , ip(sender)
       , request(r)
       , pid(pid_);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     invalid_request_alert(torrent_handle const& h, tcp::endpoint const& ip
       , peer_id const& pid, peer_request const& r)
       : peer_alert(h, ip, pid)
@@ -244,7 +258,7 @@ namespace libtorrent {
 
 #if LIBTORRENT_VERSION_MINOR == 13
     asio::ip::tcp::endpoint ip;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::tcp::endpoint ip;
 #endif
     peer_request request;
@@ -259,7 +273,7 @@ namespace libtorrent {
       const torrent_handle& h
       , const std::string& msg)
       : torrent_alert(h, alert::warning, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     torrent_finished_alert(
       const torrent_handle& h)
       : torrent_alert(h);
@@ -277,7 +291,7 @@ namespace libtorrent {
       , const std::string& msg)
       : torrent_alert(h, alert::debug, msg)
       , piece_index(piece_num);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     piece_finished_alert(
       const torrent_handle& h
       , int piece_num)
@@ -301,7 +315,7 @@ namespace libtorrent {
       : torrent_alert(h, alert::debug, msg)
       , block_index(block_num)
       , piece_index(piece_num);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     block_finished_alert(const torrent_handle& h, tcp::endpoint const& ip
       , peer_id const& pid, int block_num, int piece_num)
       : peer_alert(h, ip, pid)
@@ -328,7 +342,7 @@ namespace libtorrent {
       , peer_speedmsg(speedmsg)
       , block_index(block_num)
       , piece_index(piece_num);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     block_downloading_alert(const torrent_handle& h, tcp::endpoint const& ip
       , peer_id const& pid, char const* speedmsg, int block_num, int piece_num)
       : peer_alert(h, ip, pid)
@@ -339,7 +353,7 @@ namespace libtorrent {
 
 #if LIBTORRENT_VERSION_MINOR == 13
     std::string peer_speedmsg;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     char const* peer_speedmsg;
 #endif
     int block_index;
@@ -360,7 +374,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13
     torrent_deleted_alert(torrent_handle const& h, std::string const& msg)
       : torrent_alert(h, alert::warning, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     torrent_deleted_alert(torrent_handle const& h)
       : torrent_alert(h);
 #endif
@@ -372,7 +386,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13
     torrent_paused_alert(torrent_handle const& h, std::string const& msg)
       : torrent_alert(h, alert::warning, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     torrent_paused_alert(torrent_handle const& h)
       : torrent_alert(h);
 #endif
@@ -384,7 +398,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13
     torrent_checked_alert(torrent_handle const& h, std::string const& msg)
       : torrent_alert(h, alert::info, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     torrent_checked_alert(torrent_handle const& h)
       : torrent_alert(h);
 #endif
@@ -411,7 +425,7 @@ namespace libtorrent {
       const torrent_handle& h
       , const std::string& msg)
       : torrent_alert(h, alert::fatal, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     file_error_alert(
       std::string const& f
       , const torrent_handle& h
@@ -430,7 +444,7 @@ namespace libtorrent {
       const torrent_handle& h
       , const std::string& msg)
       : torrent_alert(h, alert::info, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     metadata_failed_alert(const torrent_handle& h)
       : torrent_alert(h);
 #endif
@@ -444,7 +458,7 @@ namespace libtorrent {
       const torrent_handle& h
       , const std::string& msg)
       : torrent_alert(h, alert::info, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     metadata_received_alert(
       const torrent_handle& h)
       : torrent_alert(h);
@@ -460,7 +474,7 @@ namespace libtorrent {
       , std::string const& msg)
       : alert(alert::fatal, msg)
       , endpoint(ep);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     listen_failed_alert(
       tcp::endpoint const& ep
       , error_code const& ec)
@@ -470,7 +484,7 @@ namespace libtorrent {
 
 #if LIBTORRENT_VERSION_MINOR == 13
     asio::ip::tcp::endpoint endpoint;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::tcp::endpoint endpoint;
 #endif
   };
@@ -484,14 +498,14 @@ namespace libtorrent {
       , std::string const& msg)
       : alert(alert::fatal, msg)
       , endpoint(ep);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     listen_succeeded_alert(tcp::endpoint const& ep)
       : endpoint(ep);
 #endif
 
 #if LIBTORRENT_VERSION_MINOR == 13
     asio::ip::tcp::endpoint endpoint;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::tcp::endpoint endpoint;
 #endif
   };
@@ -502,7 +516,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13
     portmap_error_alert(const std::string& msg)
       : alert(alert::warning, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     portmap_error_alert(int i, int t, const std::string& msg_)
       :  mapping(i), type(t), msg(msg_);
 #endif
@@ -514,7 +528,7 @@ namespace libtorrent {
 #if LIBTORRENT_VERSION_MINOR == 13
     portmap_alert(const std::string& msg)
       : alert(alert::info, msg);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     portmap_alert(int i, int port, int t)
       : mapping(i), external_port(port), type(t);
 #endif
@@ -535,14 +549,14 @@ namespace libtorrent {
       , std::string const& msg)
       : alert(alert::info, msg)
       , ip(ip_);
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     peer_blocked_alert(address const& ip_)
       : ip(ip_);
 #endif
     
 #if LIBTORRENT_VERSION_MINOR == 13
     asio::ip::address ip;
-#elif LIBTORRENT_VERSION_MINOR == 14
+#elif LIBTORRENT_VERSION_MINOR >= 14
     boost::asio::ip::address ip;
 #endif
   };
