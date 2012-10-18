@@ -4,7 +4,6 @@ require 'fileutils'
 
 BuildDir = "build"
 ExportDir = "export"
-VersionFile = "#{BuildDir}/VERSION"
 TemplateFile = "#{BuildDir}/script-template"
 
 # Create a script that will live under the bin/ subdirectory. This function
@@ -52,6 +51,15 @@ def cleanRepo?
   true
 end
 
+# Get the version of torrentflow, based on the last git version tag.
+def getVersionFromGit
+  versions = []
+  `git tag -l`.each_line do |line|
+    versions.push $1 if line =~ /^v(\d+.\d+.\d+)/
+  end
+  versions.last
+end
+
 # Setup the load path
 if ! File.directory?(BuildDir)
   $stderr.puts "Please run this script from the base source directory"
@@ -70,7 +78,7 @@ rescue
 end
 
 FileUtils.mkdir ExportDir
-version = File.read(VersionFile).strip
+version = getVersionFromGit
 
 versionDir = "torrentflow-#{version}"
 packageDir = "#{ExportDir}/#{versionDir}"
