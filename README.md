@@ -22,9 +22,11 @@ Dependencies
 Installation and running requires:
 
   * ruby
+  * ruby1.8-dev
   * g++
   * make
-  * libtorrent-rasterbar-dev, and libtorrent-rasterbar (version 0.14 or higher)
+  * libtorrent-rasterbar-dev, and libtorrent-rasterbar (version 0.14 - 0.16)
+  * libasio-dev (if not installed as part of boost)
   * json rubygem
   * mahoro rubygem
   * sinatra rubygem
@@ -33,18 +35,7 @@ Installation and running requires:
 
 Building requires:
 
-  * ruby1.8-dev
   * swig 1.3
-  * make
-  * g++
-  * libtorrent-rasterbar-dev, and libtorrent-rasterbar (version 0.14 or higher)
-  * libasio-dev (if not installed as part of boost)
-
-
-Building
---------
-
-1. Change to the libtorrent directory and run `./extconf.rb`
 
 
 Installation
@@ -78,6 +69,12 @@ Running
 5. Stop the daemon and web application using `bin/stop-daemon` and `bin/stop-sinatra`
 
 
+Building
+--------
+
+1. Change to the libtorrent directory and run `./extconf.rb`
+
+
 Known Issues
 ------------
 
@@ -87,7 +84,7 @@ The Torrentflow website looks terrible in Internet Explorer.
 Appendix A: Installing Dependencies
 -----------------------------------
 
-To install ruby, g++, make, and libtorrent-rasterbar-dev you should use the package management
+To install ruby, g++, make, ruby-dev, libasio-dev, and libtorrent-rasterbar-dev you should use the package management
 system of your Linux distribution.
 
 To install the rubygems use the gem tool. For example to install sinatra, use:
