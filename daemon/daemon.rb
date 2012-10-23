@@ -14,6 +14,9 @@ end
 if ! $:.include?("daemon")
   $: << "daemon"
 end
+if ! $:.include?(".")
+  $: << "."
+end
 
 require 'logging'
 require 'OptionHandler'

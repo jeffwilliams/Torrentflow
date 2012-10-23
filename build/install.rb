@@ -143,24 +143,26 @@ end
 puts "OK"
 
 # Build extension
-print "Compiling ruby extension for libtorrent-rasterbar..."
-$stdout.flush
-Dir.chdir("libtorrent") do 
-  if ! system("ruby extconf.rb >> ../#{InstallLog} 2>&1")
-    puts "FAILED"
-    puts "An error occurred when running 'ruby extconf.rb' in directory 'libtorrent'. Aborting install."
-    puts "Check #{InstallLog} for details."
-    exit 1
+if ! File.exists? "libtorrent/libtorrent.so"
+  print "Compiling ruby extension for libtorrent-rasterbar..."
+  $stdout.flush
+  Dir.chdir("libtorrent") do 
+    if ! system("ruby extconf.rb >> ../#{InstallLog} 2>&1")
+      puts "FAILED"
+      puts "An error occurred when running 'ruby extconf.rb' in directory 'libtorrent'. Aborting install."
+      puts "Check #{InstallLog} for details."
+      exit 1
+    end
+    
+    if ! system("make >> ../#{InstallLog} 2>&1")
+      puts "FAILED"
+      puts "An error occurred when running make in directory 'libtorrent'. Aborting install."
+      puts "Check #{InstallLog} for details."
+      exit 1
+    end
   end
-  
-  if ! system("make >> ../#{InstallLog} 2>&1")
-    puts "FAILED"
-    puts "An error occurred when running make in directory 'libtorrent'. Aborting install."
-    puts "Check #{InstallLog} for details."
-    exit 1
-  end
+  puts "OK"
 end
-puts "OK"
 
 print "Updating TorrentflowHome in bin/ scripts..."
 $stdout.flush

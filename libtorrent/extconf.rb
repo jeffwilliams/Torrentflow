@@ -7,15 +7,9 @@ def dependenciesModifiedSince?(time)
   ["extconf.rb"].concat(Dir.glob("*.i")).reduce(false){ |memo, i| memo || File.mtime(i) > time }
 end
 
-# Check if makefile already exists and if it is newer than us and the swig files.
-if File.exists?("Makefile")
-  makefileMtime = File.mtime("Makefile")
-  if ! dependenciesModifiedSince?(makefileMtime)
-    puts "No dependencies were updated since Makefile was created."
-    exit 0
-  end
+def runSwig(swig, args)
+  system("#{swig} #{args} -autorename -c++ -ruby -o libtorrent.cpp libtorrent.i")
 end
-
 
 idir, ldir = dir_config("libtorrent", "/usr/include", "/usr/lib")
 have_library("torrent-rasterbar")
@@ -38,7 +32,16 @@ if libtorrentVersion.reduce(0){ |memo, n| memo < 0 || n < 0 ? -1 : 0 } < 0
   puts "Can't determine libtorrent version. Got #{libtorrentVersion.join(".")}"
   exit 1
 end
-puts "libtorrent version #{libtorrentVersion.join(".")}"
+puts "Libtorrent version: #{libtorrentVersion.join(".")}"
+
+# Check if makefile already exists and if it is newer than us and the swig files.
+if File.exists?("Makefile")
+  makefileMtime = File.mtime("Makefile")
+  if ! dependenciesModifiedSince?(makefileMtime)
+    puts "No dependencies were updated since Makefile was created."
+    exit 0
+  end
+end
 
 if libtorrentVersion[0] != 0 || libtorrentVersion[1] < 14 || libtorrentVersion[1] > 16
   puts "RubyTorrent only supports libtorrent 0.14 - 0.16."
@@ -49,7 +52,7 @@ if ! File.exists?("libtorrent.cpp") || dependenciesModifiedSince?(File.mtime("li
   swig = find_executable('swig')
   swigOpts = "-DLIBTORRENT_VERSION_MINOR=#{libtorrentVersion[1]}"
   print "Generating C++ wrapper file..."
-  if ! system("./runswig.rb #{swig} #{swigOpts}")
+  if ! runSwig(swig, swigOpts)
     puts "Failed!"
     exit 1
   end

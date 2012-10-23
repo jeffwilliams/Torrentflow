@@ -19,14 +19,9 @@ libtorrent-ruby package, which was under the BSD license.
 Dependencies
 ------------
 
-Installation and running requires:
+Running requires:
 
   * ruby
-  * ruby1.8-dev
-  * g++
-  * make
-  * libtorrent-rasterbar-dev, and libtorrent-rasterbar (version 0.14 - 0.16)
-  * libasio-dev (if not installed as part of boost)
   * json rubygem
   * mahoro rubygem
   * sinatra rubygem
@@ -36,21 +31,30 @@ Installation and running requires:
 Building requires:
 
   * swig 1.3
+  * make
+  * g++
+  * ruby1.8-dev
+  * libtorrent-rasterbar-dev, and libtorrent-rasterbar (version 0.14 - 0.16)
+  * libasio-dev (if not installed as part of boost)
 
 
-Installation
+Installation 
 ------------
 
 1. Unpack the torrentflow archive to the desired installation path and unpack the archive. 
 
-2. Install the dependencies (See appendix A for details)
+2. If you downloaded the binary package, install the dependencies for running. If you downloaded the
+   source package, install the building and running dependencies (See appendix A for details).
 
 3. In the installation directory run `./install.rb`.
 
 4. Edit the configuration file `etc/torrentflowdeamon.conf` and set appropriate settings for the 
    parameters. 
 
-5. Add at least one user using `bin/adduser <username>`. 
+5. (Optional) Edit the configuration file `etc/sinatra.conf` and set appropriate settings for the 
+   parameters. 
+
+6. Add at least one user using `bin/adduser <username>`. 
 
 
 Running
@@ -78,7 +82,7 @@ Building
 Known Issues
 ------------
 
-The Torrentflow website looks terrible in Internet Explorer.
+The Torrentflow webapp looks terrible in Internet Explorer.
 
 
 Appendix A: Installing Dependencies

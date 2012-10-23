@@ -5,11 +5,14 @@ class AppServerConfig < BaseConfig
 
   def initialize
     @urlBasePath = ""
+    @listenPort = 4567
   end
   
   def self.configFileName
     AppserverConfigFilename
   end
+
+  attr_accessor :listenPort
 
   # Logging
   attr_accessor :logFile
@@ -21,6 +24,8 @@ class AppServerConfig < BaseConfig
 
   protected
   def handleYaml(yaml, dontValidateDirs = false)
+    @listenPort = yaml['port'].to_i
+
     @logFile = yaml['log_file']
     if ! @logFile
       $logger.error "The configuration file log_file setting is missing"

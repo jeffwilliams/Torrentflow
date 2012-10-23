@@ -3,7 +3,7 @@
 require 'fileutils'
 
 BuildDir = "build"
-ExportDir = "export"
+ExportBaseDir = "export"
 TemplateFile = "#{BuildDir}/script-template"
 
 # Create a script that will live under the bin/ subdirectory. This function
@@ -66,22 +66,66 @@ if ! File.directory?(BuildDir)
   exit 1
 end
 
-
-puts "Building libtorrent extension"
-Dir.chdir("libtorrent") do
-  system("./extconf.rb")
+mode = ARGV[0]
+if ! mode
+  puts "Usage #{$0} [binary|source]"
+  puts ""
+  puts "Use binary to create a binary package, and source to create a source package."
+  exit 1
+end
+mode = mode.to_sym
+if mode != :binary && mode != :source
+  puts "Invalid mode #{mode}"
+  exit 1
 end
 
+exportDir = ExportBaseDir + "/binary"
+exportDir = ExportBaseDir + "/source" if mode == :source
+
+libtorrentVersion = nil
+if mode == :binary
+  puts "Building libtorrent extension"
+  Dir.chdir("libtorrent") do
+    `./extconf.rb`.each_line do |line|
+      print line
+      libtorrentVersion = $1 if line =~ /Libtorrent version: (.*)/
+    end
+    exit 1 if ! $?.success?
+
+    if ! libtorrentVersion
+      puts "Can't determine libtorrent version from extconf.rb output."
+      exit 1
+    end
+
+    exit 1 if ! system("make")
+  end
+  # We only care about the major/minor version of libtorrent, not tiny.
+  libtorrentVersion = $1 if libtorrentVersion =~ /^(\d+\.\d+)\.\d+/
+end
+rubyVersion = RUBY_VERSION
+# We only care about the major/minor version of ruby, not tiny.
+rubyVersion = $1 if rubyVersion =~ /^(\d+\.\d+)\.\d+/
+
 begin
-  FileUtils.rm_r ExportDir
+  FileUtils.rm_r exportDir
 rescue
 end
 
-FileUtils.mkdir ExportDir
+
+
+
+cleanRepo = cleanRepo?
+if ! cleanRepo
+  puts "Warning: Repository is not clean (has untracked files, added files, modified files)."
+end
+
+FileUtils.mkdir_p exportDir
 version = getVersionFromGit
 
 versionDir = "torrentflow-#{version}"
-packageDir = "#{ExportDir}/#{versionDir}"
+versionDir += "-UNCLEAN" if ! cleanRepo
+versionDir += "-ltr-#{libtorrentVersion}-ruby-#{rubyVersion}" if mode == :binary
+packageDir = "#{exportDir}/#{versionDir}"
 FileUtils.mkdir packageDir
 
 FileUtils.cp_r "README.md", packageDir
@@ -92,12 +136,16 @@ FileUtils.cp_r "www-lib", packageDir
 FileUtils.cp_r "etc", packageDir
 FileUtils.cp_r "build/install.rb", packageDir
 
-libtorrentDir = "#{packageDir}/libtorrent"
-FileUtils.mkdir libtorrentDir
 FileUtils.mkdir "#{packageDir}/logs"
 FileUtils.mkdir "#{packageDir}/var"
-FileUtils.cp "libtorrent/extconf.rb", libtorrentDir
-FileUtils.cp "libtorrent/libtorrent.cpp", libtorrentDir
+libtorrentDir = "#{packageDir}/libtorrent"
+FileUtils.mkdir libtorrentDir
+if mode == :binary
+  FileUtils.cp "libtorrent/libtorrent.so", libtorrentDir
+else
+  FileUtils.cp Dir.glob("libtorrent/*.i"), libtorrentDir
+  FileUtils.cp Dir.glob("libtorrent/extconf.rb"), libtorrentDir
+end
 
 binDir = "#{packageDir}/bin"
 FileUtils.mkdir binDir
@@ -116,55 +164,20 @@ end
 makeBinScript(binDir, "client", "") do |io|
   io.puts "runCommand \'daemon/client.rb\'"
 end
-makeBinScript(binDir, "start-sinatra", "", ['fileutils']) do |io|
-func = <<FUNC
-# Parse options
-def parseOptions
-  opt = OptionHandler.new
-  opt.parse
-
-  if opt.opts.has_key?("h") || opt.opts.has_key?("help")
-    puts "Usage: bin/start-sinatra [options]"
-    puts ""
-    puts "Options:"
-    puts "  -x: Run in foreground (don't become a daemon)"
-    exit 0
-  end
-  if opt.opts.has_key?("x")
-    $optDaemonize = false
-  end 
-end
-FUNC
-  # We need to add our requires after we change directory
-  ['daemon/OptionHandler', 'daemon/util'].each do |l|
-    io.puts "require '#{l}'"
-  end
-
-  io.puts func
-  io.puts
-  io.puts "$optDaemonize = true"
-  io.puts "parseOptions"
-  io.puts "daemonize if $optDaemonize"
-
-  io.puts "ENV['RACK_ENV'] = 'production'"
-  io.puts "system 'rackup -p 4567 sinatra/config.ru'"
-  io.puts "begin"
-  io.puts "  FileUtils.rm 'var/sinatra.pid'"
-  io.puts "rescue"
-  io.puts "end"
+makeBinScript(binDir, "start-sinatra", "") do |io|
+  io.puts "runCommand \'sinatra/sdaemon.rb\'"
 end
 makeBinScript(binDir, "stop-sinatra", "") do |io|
   io.puts "runCommand \'sinatra/stop.rb\'"
 end
 
 
-archiveName = "torrentflow_#{version}.tar.gz"
-if ! cleanRepo?
-  puts "Warning: Repository is not clean (has untracked files, added files, modified files)."
-  archiveName = "torrentflow_UNCLEAN_#{version}.tar.gz"
-end
+archiveName = "torrentflow_#{version}"
+archiveName += "_UNCLEAN" if ! cleanRepo
+archiveName += "_ltr_#{libtorrentVersion}_ruby_#{rubyVersion}" if mode == :binary
+archiveName += ".tar.gz"
 
-archive = "#{ExportDir}/#{archiveName}"
-system "tar czf #{archive} -C '#{ExportDir}' #{versionDir}"
+archive = "#{exportDir}/#{archiveName}"
+system "tar czf #{archive} -C '#{exportDir}' #{versionDir}"
 
 puts "Packaged Torrentflow version: #{version} into #{archive}"
