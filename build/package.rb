@@ -1,6 +1,11 @@
 #!/usr/bin/env ruby
 
 require 'fileutils'
+require 'rbconfig'
+RUBY_INTERPRETER_PATH = File.join(Config::CONFIG["bindir"],
+                              Config::CONFIG["RUBY_INSTALL_NAME"] +
+                              Config::CONFIG["EXEEXT"])
+
 
 BuildDir = "build"
 ExportBaseDir = "export"
@@ -86,8 +91,7 @@ libtorrentVersion = nil
 if mode == :binary
   puts "Building libtorrent extension"
   Dir.chdir("libtorrent") do
-    `./extconf.rb`.each_line do |line|
-      print line
+    `#{RUBY_INTERPRETER_PATH} extconf.rb`.each_line do |line|
       libtorrentVersion = $1 if line =~ /Libtorrent version: (.*)/
     end
     exit 1 if ! $?.success?
