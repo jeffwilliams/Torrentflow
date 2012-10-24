@@ -30,7 +30,7 @@ Running requires:
 
 Building requires:
 
-  * swig 1.3
+  * swig 1.3 (for ruby 1.8) or swig 2.0 (for ruby 1.9)
   * make
   * g++
   * ruby1.8-dev
