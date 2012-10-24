@@ -116,6 +116,11 @@ if opthandler.opts["help"] || opthandler.opts["h"]
   exit 0
 end
 
+begin
+  FileUtils.rm InstallLog
+rescue
+end
+
 print "Checking requirements..."
 $stdout.flush
 
