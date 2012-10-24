@@ -87,12 +87,24 @@ end
 exportDir = ExportBaseDir + "/binary"
 exportDir = ExportBaseDir + "/source" if mode == :source
 
+cleanRepo = cleanRepo?
+if ! cleanRepo
+  puts "Warning: Repository is not clean (has untracked files, added files, modified files)."
+end
+
 libtorrentVersion = nil
 if mode == :binary
   puts "Building libtorrent extension"
   Dir.chdir("libtorrent") do
+    # Do a clean build
+    system("make distclean")
+    begin
+      FileUtils.rm_r "libtorrent.cpp"
+    rescue
+    end
     `#{RUBY_INTERPRETER_PATH} extconf.rb`.each_line do |line|
       libtorrentVersion = $1 if line =~ /Libtorrent version: (.*)/
+      puts line
     end
     exit 1 if ! $?.success?
 
@@ -110,27 +122,31 @@ rubyVersion = RUBY_VERSION
 # We only care about the major/minor version of ruby, not tiny.
 rubyVersion = $1 if rubyVersion =~ /^(\d+\.\d+)\.\d+/
 
-begin
-  FileUtils.rm_r exportDir
-rescue
-end
-
-
-
-
-cleanRepo = cleanRepo?
-if ! cleanRepo
-  puts "Warning: Repository is not clean (has untracked files, added files, modified files)."
-end
-
-FileUtils.mkdir_p exportDir
 version = getVersionFromGit
 
 versionDir = "torrentflow-#{version}"
 versionDir += "-UNCLEAN" if ! cleanRepo
 versionDir += "-ltr-#{libtorrentVersion}-ruby-#{rubyVersion}" if mode == :binary
 packageDir = "#{exportDir}/#{versionDir}"
-FileUtils.mkdir packageDir
+
+archiveName = "torrentflow_#{version}"
+archiveName += "_UNCLEAN" if ! cleanRepo
+archiveName += "_ltr_#{libtorrentVersion}_ruby_#{rubyVersion}" if mode == :binary
+archiveName += ".tar.gz"
+
+archive = "#{exportDir}/#{archiveName}"
+
+# Clean up old packages of this version
+begin
+  FileUtils.rm_r packageDir
+rescue
+end
+begin
+  FileUtils.rm_r archive
+rescue
+end
+
+FileUtils.mkdir_p packageDir
 
 FileUtils.cp_r "README.md", packageDir
 FileUtils.cp_r "daemon", packageDir
@@ -176,12 +192,6 @@ makeBinScript(binDir, "stop-sinatra", "") do |io|
 end
 
 
-archiveName = "torrentflow_#{version}"
-archiveName += "_UNCLEAN" if ! cleanRepo
-archiveName += "_ltr_#{libtorrentVersion}_ruby_#{rubyVersion}" if mode == :binary
-archiveName += ".tar.gz"
-
-archive = "#{exportDir}/#{archiveName}"
 system "tar czf #{archive} -C '#{exportDir}' #{versionDir}"
 
 puts "Packaged Torrentflow version: #{version} into #{archive}"
