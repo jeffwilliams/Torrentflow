@@ -13,6 +13,17 @@ if File.exists?(pidFilename)
     rescue
       puts "Killing sinatra failed: #{$!}"
     end
+
+    sleep(1)
+    # Check if it really is dead
+    begin
+      Process.kill 0, pid
+      puts "Killing with TERM failed. Sending KILL."
+      Process.kill "KILL", pid
+    rescue
+    end
+
+
     FileUtils.rm pidFilename
   end
 else
