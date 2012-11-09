@@ -3,8 +3,6 @@
 #  Boardwalk.Empire.S02E01.720p.HDTV.x264-IMMERSE.mkv
 # into seasons and episodes.
 
-Directory = "/mnt/twotb/movies/"
-
 # Information that uniquely identifies an episode of a show.
 class ShowEpisode
   def initialize
@@ -111,6 +109,8 @@ class ParsedShowName
   #
   #   Format 1: Show.Name.S01E01.whatever.avi
   #   Format 2: Show.Name.S01E01E02.whatever.avi
+  #   Format 3: Show Name season 3 episode 2 whatever.avi
+  #   Format 4: Show.Name.1x2.whatever.avi
   def self.parse(rawName, metaInfo)
     rc = []
 
@@ -127,6 +127,13 @@ class ParsedShowName
       }
     # Format 3: "The Vampire Diaries Season 3 Episode 2",
     elsif rawName =~ /^(.*)season[^\d]+(\d+)[^\d]+episode[^\d]+(\d+)/i
+      showName = self.fixShowName($1, metaInfo)
+      season = $2.to_i
+      # Parse the episode part; it might be more than one episode
+      episode = $3.to_i
+      rc.push ParsedShowName.create(showName, season, episode)
+    # Format 4: 
+    elsif rawName =~ /^(.*)(\d+)x(\d+)/
       showName = self.fixShowName($1, metaInfo)
       season = $2.to_i
       # Parse the episode part; it might be more than one episode
@@ -211,6 +218,7 @@ end
 #########
 # Testing
 #########
+
 
 if $0 =~ /ShowNameParse.rb/
 
@@ -375,53 +383,63 @@ testdata = [
   "YTMND - The Soundtrack (Remastered)"
 ]
 
-interp = ShowNameInterpreter.new
-
-def filesUnder(dir)
-  Dir.new(dir).each{ |e|
-    next if e[0,1] == '.'
-    path = dir + "/" + e
-    if File.directory?(path)
-      filesUnder(path){ |f,d|
-        yield f,d
-      }
-    else
-      yield e, dir
-    end
-  }
-end
-
-#Dir.new(Directory).each{ |e|
-#testdata.each{ |e|
-filesUnder(Directory){ |e, dir|
-  if e[0,1] != '.'
-    interp.addName(e, FilenameMetaInfo.new.setParentDir(dir))
+if ARGV.size > 0
+  directory = ARGV[0]
+  if ! File.directory?(directory)
+    puts "'#{dir}' is not a directory."
+    exit 1
   end
-}
 
-shows = interp.processNames
-shows.each{ |k,v|
-  print k + ":"
-  ranges = v.episodeRanges
-  season = nil
-  comma = true
-  ranges.each{ |r|
-    if ! season || season != r.season
-      puts      
-      print "  Season #{r.season}: "
-      season = r.season
-      comma = false
+  puts "Processing files under #{directory}"
+
+  interp = ShowNameInterpreter.new
+
+  def filesUnder(dir)
+    Dir.new(dir).each{ |e|
+      next if e[0,1] == '.'
+      path = dir + "/" + e
+      if File.directory?(path)
+        filesUnder(path){ |f,d|
+          yield f,d
+        }
+      else
+        yield e, dir
+      end
+    }
+  end
+
+  filesUnder(directory){ |e, dir|
+    if e[0,1] != '.'
+      interp.addName(e, FilenameMetaInfo.new.setParentDir(dir))
     end
-    print "," if comma
-    if r.size > 1
-      print " #{r.startEpisode}-#{r.endEpisode}"
-    else
-      print " #{r.startEpisode}"
-    end
-    comma = true
   }
-  puts
-}
+
+  shows = interp.processNames
+  shows.each{ |k,v|
+    print k + ":"
+    ranges = v.episodeRanges
+    season = nil
+    comma = true
+    ranges.each{ |r|
+      if ! season || season != r.season
+        puts      
+        print "  Season #{r.season}: "
+        season = r.season
+        comma = false
+      end
+      print "," if comma
+      if r.size > 1
+        print " #{r.startEpisode}-#{r.endEpisode}"
+      else
+        print " #{r.startEpisode}"
+      end
+      comma = true
+    }
+    puts
+  }
+
+  exit 0
+end
 
 class Test
   def initialize(caption)
