@@ -19,6 +19,7 @@ require 'rubygems'
 require 'sinatra'
 require 'haml'
 require 'functions'
+require 'Mime'
 require 'logger'
 require 'logging'
 require 'AppServerConfig'
@@ -537,5 +538,56 @@ get "/#{$urlBasePath}get_alarms" do
     end
     rc
   end
+end
+
+# Class that acts as a Sinatra stream (has an 'each' method that returns
+# blocks of the result), and that closes the client when the response is completed.
+class FileDownloadStream
+  def initialize(client, tcpStream)
+    @client = client
+    @tcpStream = tcpStream
+  end
+  
+  def each
+    @tcpStream.each do |s|
+      yield s
+    end
+    @client.close
+  end
+end
+
+get "/download_file" do
+  path = params[:path]
+  result = ""
+
+  errorMessage = withAuthenticatedDaemonClient(false) do |client|
+    mimeType = Mime.instance.getMimeTypeOfFilename(path)
+    mimeType = "application/octet-stream" if ! mimeType
+
+    headers "Content-Type" => mimeType
+
+    tcpStreamHandler = client.prepareFileDownload(path)
+    if tcpStreamHandler.recvLength
+      headers "Content-Length" => tcpStreamHandler.recvLength.to_s
+    else
+      status 500
+      puts "Error: retrieving file length failed" 
+      break
+    end
+    
+    result = FileDownloadStream.new(client, tcpStreamHandler)
+    #result = tcpStreamHandler
+    nil
+  end
+
+  if errorMessage
+    status 500
+    puts "Error: #{errorMessage}"
+    break
+  end 
+
+  # Return a FileDownloadStream. Since this is an object that has the 'each' method, Sinatra
+  # will call 'each' to build up the result, streaming it block by block.
+  result
 end
 

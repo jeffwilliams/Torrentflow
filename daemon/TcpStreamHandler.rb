@@ -1,7 +1,16 @@
+# Download a file from a socket.
+# This class can be used in two ways:
+#
+#   1. Create object and call recv. This will yield the length to the passed block (if specified) and then stream to file to the passed io.
+#   2. Create object, call loadLength to get the length, then later call recv to stream the file.
+
 class TcpStreamHandler
   def initialize(socket)
     @socket = socket
+    @recvLength = nil
   end
+
+  attr_reader :recvLength
 
   # Send a stream of bytes of length 'length' read from io.
   def send(length, io)
@@ -13,28 +22,46 @@ class TcpStreamHandler
     copyStream(io, @socket) if io
   end
 
+  def loadLength
+    if @recvLength.nil?
+      binLen = nil
+      begin
+        binLen = @socket.read(8)
+      rescue
+      end
+      return nil if ! binLen
+      lengthArray = binLen.unpack("NN")
+      @recvLength = lengthArray[0] * 0x10000 + lengthArray[1]
+    end
+    @recvLength
+  end
+
   # Receive a stream of bytes and write it to the passed io
   # Returns the number of bytes written on success, or nil if there was a connection error
   # If a block is passed, the expected size of the data to be read is passed to the block.
   def recv(io)
-    binLen = nil
-    begin
-      binLen = @socket.read(8)
-    rescue
-    end
-    return nil if ! binLen
-    lengthArray = binLen.unpack("NN")
-    length = lengthArray[0] * 0x10000 + lengthArray[1]
-
+    loadLength
+    
     if block_given?
-      yield length
+      yield @recvLength
     end
 
+    result = @recvLength
     begin
-      copyStream(@socket,io,length)
-      length   
+      copyStream(@socket,io,@recvLength)
     rescue
-      nil
+      result = nil
+    end
+    @recvLength = nil
+    result
+  end
+
+  # Read the stream in chunks and pass each chunk to the block passed.
+  def each
+    loadLength
+
+    readChunksFromStream(@socket, @recvLength) do |chunk|
+      yield chunk
     end
   end
 
@@ -42,6 +69,12 @@ class TcpStreamHandler
 
   # This exists as copy_stream in Ruby 1.9 but not 1.8.
   def copyStream(src, dest, length = nil)
+    readChunksFromStream(src, length) do |chunk|
+      dest.print(chunk)
+    end
+  end
+
+  def readChunksFromStream(src, length = nil)
     bufferSize = 4096
     
     amtRead = 0
@@ -53,7 +86,7 @@ class TcpStreamHandler
       end
       buf = src.read(toRead, buf)
       break if buf.nil? || buf.length == 0
-      dest.print(buf)
+      yield buf
       amtRead += buf.length
     end
   end

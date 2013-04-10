@@ -200,6 +200,18 @@ class DaemonClient
     rc
   end
 
+  # Return a TcpStreamHandler that can be used to download the file
+  # by calling recv. 
+  def prepareFileDownload(path)
+    req = DaemonDownloadFileRequest.new(path)
+
+    rc = true
+    @genericHandler.send req
+    tcpStreamHandler = TcpStreamHandler.new(@clientSock)
+    tcpStreamHandler.loadLength
+    tcpStreamHandler
+  end
+
   # Delete a file from the daemon's data directory. 
   # Returns true if the deletion succeeded, false otherwise
   def delFile(path)

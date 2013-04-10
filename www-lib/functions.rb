@@ -41,7 +41,7 @@ end
 
 # On success, yields the client, and returns nil. On failure, returns an error message. If the block
 # yielded to returns a value, that is treated as the error message.
-def withDaemonClient
+def withDaemonClient(closeClient = true)
   port = 3000
   # Try and load the port from the config file
   config = loadConfig{ |errMsg| yield errMsg }
@@ -52,7 +52,7 @@ def withDaemonClient
   begin
     client = DaemonClient.new("localhost", port, 2)
     err = yield client
-    client.close
+    client.close if closeClient
   rescue
     return "Connecting to torrent daemon on port #{port} failed: #{$!}"
   end
@@ -61,8 +61,8 @@ end
 
 # On success, yields the client, and returns nil. On failure, returns an error message. If the block
 # yielded to returns a value, that is treated as the error message.
-def withAuthenticatedDaemonClient
-  withDaemonClient do |client|
+def withAuthenticatedDaemonClient(closeClient = true)
+  withDaemonClient(closeClient) do |client|
     if ! sessionIsValid?(client, session)
       "Your session has expired, or you need to log in"
     else
@@ -73,7 +73,7 @@ end
 
 def sessionIsValid?(client, sessionHolder)
   sid = nil
-  if sessionHolder.is_a? Hash
+  if sessionHolder.is_a?(Hash) || sessionHolder.is_a?(Rack::Session::Abstract::SessionHash)
     # Sinatra
     sid = sessionHolder[:rubytorrent_sid]
   else
