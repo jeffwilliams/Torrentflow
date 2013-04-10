@@ -1,10 +1,14 @@
 class DataPoint
-  def initialize(x,y)
+  def initialize(x,*values)
     @x = x
-    @y = y
+    @values = values
   end
-  attr_accessor :y
+
   attr_accessor :x
+
+  def value(i)
+    @values[i]
+  end
 end
 
 

@@ -183,20 +183,20 @@ class RubyTorrentInfo
     avgProc = Proc.new{ |a,b|
       DataPoint.new( (a.x + b.x)/2, (a.y + b.y)/2 )
     }
-    @downloadRateDataPoints = TimeSampleHolder.new(MaxDataPoints, avgProc)
+    @trafficRateDataPoints = TimeSampleHolder.new(MaxDataPoints, avgProc)
     @graphDataThread = nil
     @seedingStopThread = nil
   end
   # Name of the .torrent file
   attr_accessor :torrentFileName
   # A TimeSampleHolder that contains DataPoint objects for the download rate at a given time
-  attr_accessor :downloadRateDataPoints
+  attr_accessor :trafficRateDataPoints
   # The thread getting sample data points
   attr_accessor :graphDataThread
 
   def startGraphDataThread(torrentHandle)
     if ! @graphDataThread
-      @graphDataThread = GraphDataThread.new(torrentHandle, @downloadRateDataPoints)
+      @graphDataThread = GraphDataThread.new(torrentHandle, @trafficRateDataPoints)
       @graphDataThread.run
     end
   end
@@ -277,7 +277,7 @@ class GraphDataThread < TorrentHandleBackgroundThread
         # Only add the sample if the torrent is running
         if torrentIsRunning
           @timeSampleHolderMutex.synchronize{
-            @timeSampleHolder.addSample DataPoint.new( (Time.new - startTime) / 60, (@handle.status.download_rate.to_f/1024))
+            @timeSampleHolder.addSample DataPoint.new( (Time.new - startTime) / 60, (@handle.status.download_rate.to_f/1024), (@handle.status.upload_rate.to_f/1024))
           }
         end
         sleep 5
@@ -952,11 +952,11 @@ class RasterbarLibtorrentRequestHandler < RequestHandler
     data = []
     if info.graphDataThread
       info.graphDataThread.timeSampleHolderMutex.synchronize{ 
-        data = info.downloadRateDataPoints.samples
+        data = info.trafficRateDataPoints.samples
       
       }
     else
-      data = info.downloadRateDataPoints.samples
+      data = info.trafficRateDataPoints.samples
     end
     resp.dataPoints = data
 

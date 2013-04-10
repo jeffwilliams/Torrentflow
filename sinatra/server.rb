@@ -407,24 +407,29 @@ get "/#{$urlBasePath}get_torrentgraphdata" do
   torrentName = CGI.unescape(params[:name])
   
   rc = nil
+  errorMessage = nil
   errorMessage = withAuthenticatedDaemonClient do |client|
     points = client.getGraphInfo(torrentName)
     if ! points
+      $logger.error "Retrieving graph data for torrent #{torrentName} failed"
       errorMessage = client.errorMsg
-      rc = "Error, Error\n"  
+      rc = "Error, Error, Error\n"  
+      errorMessage
     else
-      rc = "Time,Rate\n"
+      rc = "Time,Download Rate,Upload Rate\n"
       points.each{ |p|
-        rc << "#{"%.3f" % p.x},#{"%.3f" % p.y}\n"
+        rc << "#{"%.3f" % p.x},#{"%.3f" % p.value(0)},#{"%.3f" % p.value(1)}\n"
       }
       if points.size == 0
-        rc << "0.0,0.0\n"
+        rc << "0.0,0.0,0.0\n"
       end 
+      nil
     end
   end
   
   if errorMessage
-    rc = "Error, Error\n"  
+    $logger.error "Retrieving graph data for torrent #{torrentName} failed: #{errorMessage}"
+    rc = "Error, Error, Error\n"
   end
 
   rc

@@ -1383,9 +1383,10 @@ function loadOverlayContents(torrentInfo)
     url,
 
     {
-      title: "Download Rate while downloading",
+      title: "Traffic Rate",
       xlabel: "Time (minutes)",
       ylabel: "Rate (KB/s)",
+      legend: 'always',
       drawCallback: overlayGraphDrawnCallback
     }
   );
