@@ -133,7 +133,7 @@ class ParsedShowName
       episode = $3.to_i
       rc.push ParsedShowName.create(showName, season, episode)
     # Format 4: 
-    elsif rawName =~ /^(.*)(\d+)x(\d+)/
+    elsif rawName =~ /^(.*)\.(\d+)x(\d+)\./
       showName = self.fixShowName($1, metaInfo)
       season = $2.to_i
       # Parse the episode part; it might be more than one episode
