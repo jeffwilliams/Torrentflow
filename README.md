@@ -1,3 +1,8 @@
+Warning
+=======
+
+Torrentflow is no longer being developed. It has been superceded by [QuartzFlow] (https://github.com/jeffwilliams/quartz-flow).
+
 Torrentflow
 ===========
 
